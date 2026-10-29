@@ -1,0 +1,2063 @@
+ ▐▛███▛█   Claude Code v2.1.312
+▝▜██████▀  Opus 5.5 · Claude Pro
+ ▝▝   ▝▝   ~\Desktop\insider-case
+
+  ⎿  SessionStart:clear says: [insider-case] recent context, 2026-10-29 5:35pm 
+     GMT+3
+     ────────────────────────────────────────────────────────────
+
+     Legend: session-request | 🔴 bugfix | 🟣 feature | 🔄 refactor | ✅ change 
+     | 🔵 discovery | ⚖️ decision
+
+     Column Key
+       Read: Tokens to read this observation (cost to learn it now)
+       Work: Tokens spent on work that produced this record ( research, 
+     building, deciding)
+
+     Context Index: This semantic index (titles, types, files, tokens) is 
+     usually sufficient to understand past work.
+
+     When you need implementation details, rationale, or debugging context:
+       - Fetch by ID: get_observations([IDs]) for observations visible in this 
+     index
+       - Search history: Use the mem-search skill for past decisions, bugs, and 
+     deeper research
+       - Trust this index over re-reading code for past decisions and learnings
+
+     Context Economics
+       Loading: 1 observations (465 tokens to read)
+       Work investment: 3,296 tokens spent on research, building, and decisions
+       Your savings: 86% reduction from reuse
+
+     Oct 29, 2026
+
+     <desktop>\mail.txt
+       #4299  5:35 PM  🔵  Insider One AI Software Engineer case study
+     requirements  
+
+
+     Access 3k tokens of past research & decisions for just 465t. Use the 
+     claude-mem skill to access memories by ID.
+
+     View Observations Live @ http://localhost:37777
+
+❯ /clear                                                                        
+
+❯ /export                                                                       
+  ⎿  Conversation exported to: <repo>\2026-10-29-17
+     3554-local-command-caveatthe-command-below-was-run-d.txt
+
+❯ Kankam işe giriş için bir case-study gönderdiler. Insider One, AI Software    
+  Engineer rolü. Case masaüstünde mail.txt içeride yazıyor. Gelen maili oraya   
+  kopyaladım artı olarak case'in linkini ekledim. Linke erişemezsem haber ver.  
+  Şimdilik kod yazma, sadece anla. Case ile mail arasında fark ya da ek bilgi   
+  varsa ayrıca belirt.                                                          
+
+  Read 1 file (ctrl+o to expand)
+
+● Artifact(read https://claude.ai/artifact/Vdtq1yNTx4buTo9A1jTvmj)
+  ⎿  Received 56.4KB (200 OK)
+
+  Ran 3 shell commands (ctrl+o to expand)
+
+● Linkteki case'i okudum, şimdi orijinal Türkçe metni HTML'den çıkarıp özetle
+  karşılaştırıyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Updated plan
+  ⎿  /plan to preview
+
+● Linke ulaştım ve case'in tamamını okudum. Kod yazmadım.
+
+  Case: Smart Campaign Composer
+
+  Pazarlamacı kampanyayı doğal dille anlatıyor (brief). Akış şöyle: brief → 
+  Claude → hedef kitle kuralı + SMS/email metni → insan onayı → kuyruk → sahte 
+  gönderim servisi → canlı dashboard.
+
+  - Teknoloji: Vue.js, backend için Go veya PHP, Claude API. Veritabanı ve
+    kuyruk sana kalmış.
+  - Kitle: Claude'un ürettiği kural backend'de doğrulanmalı. LLM çıktısı asla 
+    doğrudan SQL olarak çalıştırılmamalı. Kullanıcının o kanala izni yoksa mesaj
+    gönderilmemeli. Arayüz kaç kişiye ulaşılacağını göstermeli.
+  - İçerik: SMS en fazla 160 karakter, email konusu en fazla 80 karakter.
+    {{first_name}} gibi değişkenler desteklenmeli. Metin ekrana üretildikçe
+    akmalı (streaming).
+  - Gönderim: Asenkron kuyruk kullanılacak, kanal başına saniyede en fazla 100
+    mesaj. Aynı kişiye aynı mesaj iki kez gitmemeli. Retry stratejisini sen
+    tasarlıyorsun.
+  - Takip: Canlı gönderim durumu, metrics ve health check endpoint'leri.
+  - AI kısmı (case'te "en önemli kısım" deniyor): Claude'un çıktısı JSON olmalı
+    ve backend'de kontrol edilmeli. Testler gerçek API key olmadan, mock LLM ile
+    çalışmalı.
+  - Senin hazırlayacakların:
+    - Birkaç bin kişilik sahte kullanıcı verisi (seed)
+    - Ara sıra hata, gecikme ve 429 döndüren sahte SMS/email servisi (mock
+      provider)
+    - .env.example dosyası; uygulama key'i ANTHROPIC_API_KEY'den okuyacak
+  - Bonus: Zamanlanmış gönderim, A/B varyantları, kullanıcının diline göre
+    içerik, CI.
+  - Puanlama: LLM entegrasyonu %25, mimari %20, backend güvenilirliği %20,
+    frontend %20, test ve kod kalitesi %15.
+
+  Mail ile case arasındaki farklar
+
+  Çelişki yok. Teknik detayların hepsi case'te, mail kısa bir özet ve süreç
+  bilgisi veriyor.
+
+  Sadece mailde olanlar:
+  - Teslim yolu: repo linkini maile reply all ile göndereceksin (gönderen kişi
+    ve [recruiter]).
+  - Süre: "mailin ulaştığı günden itibaren 7 gün". Case sadece "7 gün içinde"
+    diyor. Mailin geldiği tarih mail.txt'de yok, son günü sen hesaplamalısın.
+  - Soru sormak ya da ek süre istemek için de reply all kullanılacak.
+  - Teslimden sonra bir hafta içinde, sonuç ne olursa olsun dönüş yapacaklarını
+    söylüyorlar.
+  - Rol adı mailde "AI Software Engineer", case'te "AI Developer" geçiyor.
+    Önemsiz bir fark.
+
+  Sadece case'te olanlar: Tüm fonksiyonel ve AI gereksinimleri, teknoloji
+  listesi, karakter limitleri, mock provider davranışı, .env.example, bonus
+  listesi ve puan ağırlıkları.
+
+  Case'in açık bıraktığı, DECISIONS.md'de karar vermen gereken noktalar
+
+  1. SMS 160 sınırı: {{first_name}} yerine isim yazıldıktan sonra da sınır
+     içinde kalmalı mı? Ayrıca Türkçe karakterler (ş, ğ, ı) standart SMS
+     karakter setinde yok. Bu yüzden tek SMS pratikte 70 karaktere düşüyor. Bunu
+     fark ettiğini göstermek iyi bir artı olur.
+  2. "Aynı mesaj iki kez gitmez" için tekrar kontrolünü neye bağlayacağın. Bence
+     kampanya + kullanıcı + kanal üçlüsü yeterli.
+  3. Retry: 429, 5xx ve zaman aşımı nasıl ayrılacak, bekleme süresi nasıl
+     artacak (backoff), en fazla kaç deneme yapılacak, sonunda başarısız
+     mesajlar ne olacak.
+  4. Segment kuralının formatı. Önerim: sadece izin verilen alan ve operatörleri
+     kabul eden bir JSON kuralı. Backend bunu güvenli şekilde sorguya çevirir.
+  5. Go mu PHP mi.
+
+  Not: ai-sessions/ klasörüne bu session dahil tüm export'lar girecek.
+  Göndermeden önce içlerindeki e-posta adresi gibi kişisel bilgileri
+  temizlemelisin.
+
+  Hazır olduğunda mimari ve teknoloji kararlarına geçebiliriz.
+
+✻ Churned for 1m 21s · done 5:39 PM
+
+❯ Okumuşsun güzel. Şimdi analize geçelim. Bana şu bilgileri düzenle 1-          
+  gereksinimleri test edilebilir maddeler halinde ver. 2- neleri teslim         
+  edeceğiz 3- değerlendirme kriterleri ve ağırlıkları 4- bonus maddeler (ki ben 
+  yapalım diyorum) 5- yukarıda sorduğun gibi belirsiz kalan karar vermem        
+  gerekenler 6- en kritik bunu kaçırma dediğin maddeler.                        
+
+● Kod yazmadım, aşağıdakiler sadece analiz.
+
+  1. Test edilebilir gereksinimler
+
+  Kitle (AUD)
+
+  ┌───────┬──────────────────────────────────┬──────────────────────────────┐
+  │  ID   │            Gereksinim            │       Nasıl doğrulanır       │
+  ├───────┼──────────────────────────────────┼──────────────────────────────┤
+  │       │ Claude brief'ten yapılandırılmış │ Örnek brief verilir, dönen   │
+  │ AUD-1 │  (JSON) bir segment kuralı       │ JSON şemaya uyar             │
+  │       │ üretir                           │                              │
+  ├───────┼──────────────────────────────────┼──────────────────────────────┤
+  │       │ Kural backend'de doğrulanır:     │ Bilinmeyen alan, hatalı      │
+  │ AUD-2 │ sadece izin verilen alanlar,     │ operatör ya da tip içeren    │
+  │       │ operatörler ve değer tipleri     │ kural reddedilir             │
+  │       │ kabul edilir                     │                              │
+  ├───────┼──────────────────────────────────┼──────────────────────────────┤
+  │       │                                  │ "city": "x' OR 1=1 --" gibi  │
+  │ AUD-3 │ LLM çıktısı hiçbir zaman         │ bir değer sorguya parametre  │
+  │       │ doğrudan SQL olarak çalışmaz     │ olarak gider, sorgunun       │
+  │       │                                  │ yapısı değişmez              │
+  ├───────┼──────────────────────────────────┼──────────────────────────────┤
+  │       │                                  │ Seed verisi bilindiği için   │
+  │ AUD-4 │ Arayüz kuralın kaç kişiye        │ beklenen sayı önceden        │
+  │       │ ulaşacağını gösterir             │ hesaplanır, API aynı sayıyı  │
+  │       │                                  │ döner                        │
+  ├───────┼──────────────────────────────────┼──────────────────────────────┤
+  │       │                                  │ SMS izni olmayan kullanıcıya │
+  │ AUD-5 │ Kanal izni olmayan kullanıcı o   │  SMS gönderilmez; kişi       │
+  │       │ kanaldan mesaj almaz             │ sayısı kanal bazında ayrı    │
+  │       │                                  │ gösterilir                   │
+  └───────┴──────────────────────────────────┴──────────────────────────────┘
+
+  İçerik (CNT)
+
+  ┌───────┬─────────────────────────────────┬───────────────────────────────┐
+  │  ID   │           Gereksinim            │       Nasıl doğrulanır        │
+  ├───────┼─────────────────────────────────┼───────────────────────────────┤
+  │ CNT-1 │ SMS en fazla 160 karakter       │ 161 karakterlik SMS           │
+  │       │                                 │ reddedilir                    │
+  ├───────┼─────────────────────────────────┼───────────────────────────────┤
+  │ CNT-2 │ Email konusu en fazla 80        │ 81 karakterlik konu           │
+  │       │ karakter                        │ reddedilir                    │
+  ├───────┼─────────────────────────────────┼───────────────────────────────┤
+  │       │ {{first_name}} gibi değişkenler │ Mesaj kişiye özel doğru       │
+  │ CNT-3 │  desteklenir                    │ doldurulur; bilinmeyen        │
+  │       │                                 │ değişken ({{foo}}) reddedilir │
+  ├───────┼─────────────────────────────────┼───────────────────────────────┤
+  │       │ SMS ve email metni ekrana       │ Stream endpoint'i yanıtı      │
+  │ CNT-4 │ üretildikçe akar                │ parça parça yollar (SSE ya da │
+  │       │                                 │  WebSocket)                   │
+  ├───────┼─────────────────────────────────┼───────────────────────────────┤
+  │       │ Pazarlamacı metni               │ Elle 200 karakterlik SMS      │
+  │ CNT-5 │ düzenleyebilir; düzenlenmiş     │ yazılırsa onay reddedilir     │
+  │       │ hali de aynı doğrulamadan geçer │                               │
+  ├───────┼─────────────────────────────────┼───────────────────────────────┤
+  │       │ Onay alınmadan hiçbir mesaj     │ Kampanya taslak durumundayken │
+  │ CNT-6 │ gönderilmez                     │  gönderim endpoint'i hata     │
+  │       │                                 │ döner                         │
+  └───────┴─────────────────────────────────┴───────────────────────────────┘
+
+  Gönderim (SND)
+
+  ┌───────┬──────────────────────────────┬──────────────────────────────────┐
+  │  ID   │          Gereksinim          │         Nasıl doğrulanır         │
+  ├───────┼──────────────────────────────┼──────────────────────────────────┤
+  │       │ Gönderim asenkron bir kuyruk │ Onay isteği hemen döner,         │
+  │ SND-1 │  üzerinden yapılır           │ gönderim arka planda (worker'da) │
+  │       │                              │  sürer                           │
+  ├───────┼──────────────────────────────┼──────────────────────────────────┤
+  │       │                              │ 1000 mesajlık gönderim en az ~10 │
+  │ SND-2 │ Kanal başına saniyede en     │  saniye sürer; provider          │
+  │       │ fazla 100 mesaj              │ tarafında saniyede 100'ü aşan    │
+  │       │                              │ istek görülmez                   │
+  ├───────┼──────────────────────────────┼──────────────────────────────────┤
+  │       │                              │ Aynı iş iki kez kuyruğa atılır   │
+  │ SND-3 │ Aynı kişiye aynı mesaj iki   │ ya da worker yarıda çöker;       │
+  │       │ kez gitmez                   │ provider yine de tek gönderim    │
+  │       │                              │ görür                            │
+  ├───────┼──────────────────────────────┼──────────────────────────────────┤
+  │       │ 429, 5xx ve zaman aşımında   │ Mock provider hata döndürecek    │
+  │ SND-4 │ tekrar denenir; 4xx          │ şekilde ayarlanır, deneme sayısı │
+  │       │ hatalarda (429 hariç) tekrar │  ve bekleme süreleri kontrol     │
+  │       │  denenmez                    │ edilir                           │
+  ├───────┼──────────────────────────────┼──────────────────────────────────┤
+  │       │ Deneme hakkı biten mesaj     │ Provider hep hata döner; bütün   │
+  │ SND-5 │ failed durumuna düşer,       │ mesajlar sonunda kesin bir       │
+  │       │ sistem takılı kalmaz         │ duruma (terminal state) ulaşır   │
+  └───────┴──────────────────────────────┴──────────────────────────────────┘
+
+  Takip (TRK)
+
+  ┌───────┬────────────────────────────────────┬────────────────────────────┐
+  │  ID   │             Gereksinim             │      Nasıl doğrulanır      │
+  ├───────┼────────────────────────────────────┼────────────────────────────┤
+  │       │ Gönderim durumu dashboard'da canlı │ Gönderim sürerken sayılar  │
+  │ TRK-1 │  görünür (queued / sent / failed / │ sayfa yenilenmeden değişir │
+  │       │  retrying sayıları)                │                            │
+  ├───────┼────────────────────────────────────┼────────────────────────────┤
+  │ TRK-2 │ Metrics endpoint'i var             │ /metrics çağrılır,         │
+  │       │                                    │ değerler döner             │
+  ├───────┼────────────────────────────────────┼────────────────────────────┤
+  │       │                                    │ /healthz veritabanı ve     │
+  │ TRK-3 │ Health check endpoint'i var        │ kuyruk ayaktayken 200,     │
+  │       │                                    │ değilse 503 döner          │
+  └───────┴────────────────────────────────────┴────────────────────────────┘
+
+  AI (AI)
+
+  ┌──────┬───────────────────────────────────────┬──────────────────────────┐
+  │  ID  │              Gereksinim               │     Nasıl doğrulanır     │
+  ├──────┼───────────────────────────────────────┼──────────────────────────┤
+  │      │ Claude'un çıktısı JSON olur ve şemaya │ Bozuk JSON ya da eksik   │
+  │ AI-1 │  göre doğrulanır                      │ alan backend'de          │
+  │      │                                       │ yakalanır                │
+  ├──────┼───────────────────────────────────────┼──────────────────────────┤
+  │      │ Geçersiz çıktıda kontrollü bir yol    │ Mock LLM önce geçersiz,  │
+  │ AI-2 │ izlenir: hata mesajıyla tekrar        │ sonra geçerli çıktı      │
+  │      │ istenir, düzelmezse kullanıcıya       │ döner; sistem toparlanır │
+  │      │ anlamlı bir hata gösterilir           │                          │
+  ├──────┼───────────────────────────────────────┼──────────────────────────┤
+  │ AI-3 │ Testler gerçek API key olmadan mock   │ ANTHROPIC_API_KEY boşken │
+  │      │ LLM ile çalışır                       │  make test geçer         │
+  ├──────┼───────────────────────────────────────┼──────────────────────────┤
+  │      │ Key .env dosyasındaki                 │ Repoda .env yok,         │
+  │ AI-4 │ ANTHROPIC_API_KEY'den okunur, repoda  │ .env.example var         │
+  │      │ .env.example bulunur                  │                          │
+  └──────┴───────────────────────────────────────┴──────────────────────────┘
+
+  Altyapı ve veri (INF)
+
+  ┌───────┬────────────────────────────────────┬────────────────────────────┐
+  │  ID   │             Gereksinim             │      Nasıl doğrulanır      │
+  ├───────┼────────────────────────────────────┼────────────────────────────┤
+  │       │ Birkaç bin kullanıcılık seed       │ docker compose up sonrası  │
+  │ INF-1 │ verisi: ad, email, telefon, şehir, │ veritabanında kullanıcı    │
+  │       │  sepet ve alışveriş geçmişi, kanal │ sayısı 3000'den fazla      │
+  │       │  izinleri                          │                            │
+  ├───────┼────────────────────────────────────┼────────────────────────────┤
+  │       │ Mock provider ara sıra hata,       │ Bu oranlar sıfıra          │
+  │ INF-2 │ gecikme ve 429 döndürür; oranlar   │ çekilerek deterministik    │
+  │       │ ayarlanabilir                      │ test yapılabilir           │
+  ├───────┼────────────────────────────────────┼────────────────────────────┤
+  │       │ Kurulum tek komutla, temiz         │ Repo klonlanır, docker     │
+  │ INF-3 │ makinede çalışır                   │ compose up çalıştırılır,   │
+  │       │                                    │ uygulama hazır olur        │
+  └───────┴────────────────────────────────────┴────────────────────────────┘
+
+  2. Teslim edilecekler
+
+  1. GitHub veya GitLab repo linki, maile reply all ile
+  2. docker compose up: seed verisi ve mock provider dahil
+  3. make test
+  4. README.md: kurulum, kısa mimari özeti ve yetişmeyenler listesi
+  5. DECISIONS.md: önemli kararlar ve nedenleri
+  6. ai-sessions/: tüm Claude session export'ları, key ve kişisel bilgilerden
+     temizlenmiş
+  7. .env.example
+
+  3. Değerlendirme ağırlıkları
+
+  ┌───────────────────────┬─────────┐
+  │        Kriter         │ Ağırlık │
+  ├───────────────────────┼─────────┤
+  │ LLM entegrasyonu      │ %25     │
+  ├───────────────────────┼─────────┤
+  │ Mimari ve kararlar    │ %20     │
+  ├───────────────────────┼─────────┤
+  │ Backend güvenilirliği │ %20     │
+  ├───────────────────────┼─────────┤
+  │ Frontend              │ %20     │
+  ├───────────────────────┼─────────┤
+  │ Test ve kod kalitesi  │ %15     │
+  └───────────────────────┴─────────┘
+
+  LLM entegrasyonu ve mimari birlikte %45 ediyor. Yani "çalışıyor" demek yetmez.
+  Bir kararın neden alındığını ve LLM çıktısının nasıl güvenilir hale
+  getirildiğini göstermek gerekiyor. Frontend'in de %20 olması dikkat çekici:
+  streaming ve canlı dashboard özenli olmalı.
+
+  4. Bonus maddeler (dördünü de yapıyoruz)
+
+  Bonus: Zamanlanmış gönderim
+  Kapsam: Onayda bir scheduled_at seçilir; zamanı gelince bir scheduler işleri
+  kuyruğa atar
+  Dikkat: Zaman dilimi (UTC saklanır, ekranda TR saati gösterilir). Zamanlanmış
+  kampanya iptal edilebilmeli
+  ────────────────────────────────────────
+  Bonus: A/B varyantları
+  Kapsam: Kanal başına 2 metin varyantı, kitle deterministik olarak bölünür
+  (hash(user_id) % 2), metrikler varyant bazında gösterilir
+  Dikkat: Kişi bazında tekrar kontrolüne varyant da eklenmeli. Kişi iki varyantı
+
+  birden almamalı
+  ────────────────────────────────────────
+  Bonus: Kullanıcının diline göre içerik
+  Kapsam: Kullanıcıda bir language alanı (tr/en) olur, Claude her dil için metin
+
+  üretir, gönderimde kullanıcının dili seçilir
+  Dikkat: Her dil × varyant × kanal için karakter limiti ayrıca kontrol edilir.
+  Kombinasyon sayısı hızla artar
+  ────────────────────────────────────────
+  Bonus: CI pipeline
+  Kapsam: GitHub Actions'ta her push'ta make test çalışır (mock LLM ile)
+  Dikkat: Key gerekmez, zaten AI-3 bunu sağlıyor
+
+  Önerim: önce çekirdek akış uçtan uca çalışsın, bonuslar sonra eklensin. CI'yı
+  ise ilk gün kur. Ucuz ve her adımda koruma sağlıyor. A/B ve dil birlikte
+  içerik matrisini büyütüyor, o yüzden veri modeli baştan buna uygun
+  tasarlanmalı.
+
+  5. Karar vermen gerekenler
+
+  1. Backend dili: Go mu PHP mi? Kuyruk, worker, eşzamanlılık (concurrency) ve
+     streaming için Go daha doğal.
+  2. Kuyruk: Redis (Asynq gibi), RabbitMQ ya da Postgres tabanlı bir kuyruk.
+     Daha az servis daha az risk demek.
+  3. Veritabanı: Muhtemelen Postgres. Gönderim tekrarını UNIQUE(campaign_id, 
+     user_id, channel) kısıtıyla veritabanında engellemek kolay olur.
+  4. Segment kuralı formatı: Whitelist'li bir JSON kuralı (alan / operatör /
+     değer, AND-OR). Backend bunu parametreli sorguya çevirir. Örnek brief'teki
+     "sepete ekleyip almayan" gibi koşullar için hangi olay alanlarının olacağı
+     da bu kararın parçası.
+  5. SMS 160 karakter tanımı:
+     - Sınır değişken doldurulmadan önce mi sonra mı kontrol edilecek? Önerim:
+       en uzun isimle doldurulmuş hali kontrol edilsin, gönderimde gerçek isimle
+       tekrar kontrol edilsin.
+     - Türkçe karakterli SMS'te tek SMS 70 karakter (UCS-2). Bunu göz ardı mı
+       edeceğiz, uyarı mı vereceğiz, Türkçe karakterleri dönüştürecek miyiz?
+  6. "Aynı mesaj" tanımı: Kampanya + kullanıcı + kanal (+ varyant). Aynı içerik
+     farklı bir kampanyayla tekrar giderse sayılır mı?
+  7. Retry stratejisi: Rastgele sapmalı (jitter) üstel bekleme ve en fazla 5
+     deneme. Provider Retry-After başlığı dönerse ona uyulacak. Deneme hakkı
+     biten mesajlar ayrı bir başarısız mesaj kuyruğuna (DLQ) mı gidecek, yoksa
+     sadece failed durumu mu yeterli?
+  8. Rate limit nerede uygulanacak: Tek worker'da token bucket mı, birden fazla
+     worker için Redis'te ortak bir limit mi?
+  9. Canlı güncelleme yöntemi: SSE mi WebSocket mi? Hem streaming hem dashboard
+     için SSE yeterli ve basit.
+  10. LLM çağrısı: Tool use veya structured output ile JSON alınacak. Kitle ve
+      içerik tek çağrıda mı, iki ayrı çağrıda mı üretilecek? Önerim iki çağrı:
+      kitle önce onaylanır, sonra içerik üretilir.
+  11. Kimlik doğrulama: Muhtemelen kapsam dışı. README'de belirtilmesi yeterli.
+
+  6. Kaçırmaman gereken kritik maddeler
+
+  1. LLM çıktısı asla SQL olmamalı. Case bunu özellikle yazmış, büyük ihtimalle
+     ilk bakılan yer olacak. Whitelist ve parametreli sorgu ile birlikte bir
+     injection testi de ekle.
+  2. make test key olmadan geçmeli. Mock LLM arayüz arkasında olmalı. Testleri
+     Docker içinde çalıştırırsan Windows'ta make sorunu da kalkar.
+  3. docker compose up temiz makinede tek seferde çalışmalı. Seed ve migration
+     otomatik olmalı, servisler sağlıklı olmadan uygulama başlamamalı
+     (healthcheck ve depends_on). Teslimden önce repoyu sıfırdan klonlayıp
+     deneyelim.
+  4. Aynı mesaj iki kez gitmemeli. Bu korumayı veritabanı kısıtıyla garanti
+     altına al, sadece uygulama kodundaki kontrole güvenme. Worker çökme
+     senaryosunu da test et.
+  5. Kanal izni kontrolü. Gözden kaçması kolay ama case'te açıkça yazıyor.
+  6. Karakter limitleri sadece LLM çıktısında değil, elle düzenlenmiş metinde de
+     uygulanmalı.
+  7. Rate limit ve retry gerçekten test edilmeli. Mock provider'ın hata, gecikme
+     ve 429 davranışını kullanan bir test olmalı.
+  8. ai-sessions/ temizliği. Export'larda e-posta adresin ve yerel kullanıcı
+     yolların (<home>) geçiyor. Bunlar ve varsa key'ler temizlenmeli.
+     .env dosyası kesinlikle commit'lenmemeli.
+  9. README'deki "yetişmeyenler" listesi. Case bunu açıkça istiyor, eksik
+     bırakmak dürüstlükten puan kaybettirir.
+  10. DECISIONS.md'de neden ve alternatif. Mimari ve kararlar %20, ayrıca review
+      görüşmesinde bu dosyadan soru gelecek. Her kararı savunabilecek kadar
+      anlamış olman gerekiyor.
+
+  Hazırsan 5. bölümdeki kararlardan başlayalım. İlk olarak Go mu PHP mi seçmemiz
+  gerekiyor.
+
+✻ Sautéed for 55s · done 5:44 PM
+
+❯ başlayalım tabi go seçtik                                                     
+
+● User answered Claude's questions:
+  ⎿  · Backend Go olacak. Kuyruk ve veritabanı için hangisini seçelim? → 
+     Postgres + Redis/Asynq (Önerilen)
+     · Türkçe karakterli SMS'lerde (ş, ğ, ı) tek SMS'e 70 karakter sığıyor. 160 
+     sınırı için nasıl bir kural uygulayalım? → isimler karakter sayısına dahil 
+     edlim. ayrıca Türkçe karakter sebebiyle metin kısalmasını hesaba katma ilk 
+     verilen sayılar geçerli olsun. insider müşterileri yurtdışından büyük 
+     çoğunlukla bu task için böyle kalabilir.
+     · LLM çağrılarını nasıl yapılandıralım? → İki adım: kitle → içerik 
+     (Önerilen)
+     · Canlı güncellemeler (içerik akışı ve dashboard) hangi yöntemle 
+     gönderilsin? → SSE (Önerilen)
+
+● User answered Claude's questions:
+  ⎿  · İsimler karakter sayısına dahil olunca bazı kullanıcılarda SMS 160'ı 
+     aşabilir (örn. uzun isimler). Bu durumda ne olsun? → Onayda engelle 
+     (Önerilen)
+     · 'Aynı kişiye aynı mesaj iki kez gitmez' kuralı neye göre uygulansın? → 
+     Kampanya+kullanıcı+kanal (Önerilen)
+     · Retry stratejisi nasıl olsun? → Backoff + Retry-After + DLQ (Önerilen)
+     · Saniyede 100 mesaj sınırı nerede uygulansın? → Redis'te ortak limit 
+     (Önerilen)
+
+● Updated plan
+  ⎿  /plan to preview
+
+● Kararları plan dosyasına kaydettim; Go'da byte sayımı yerine
+  utf8.RuneCountInString kullanacağım çünkü "ş" gibi karakterler 2 byte'a
+  karşılık geliyor. Şimdi sıradaki kararı ele alacağım: Claude'un üreteceği
+  segment kuralının formatı, "sepete ekleyip almayan" senaryosunu en doğru ifade
+  edecek şekilde belirlenecek.
+
+● User declined to answer questions
+  ⎿  · Claude'un üreteceği segment kuralı hangi formatta olsun? (Örnek brief: 
+     Son 30 günde sepete ürün ekleyip alışveriş yapmayan İstanbul kullanıcıları)
+     (Olay tabanlı (Önerilen) / Düz kullanıcı alanları)
+     · Kurallarda iç içe AND/OR grupları desteklensin mi? (Tek seviye all/any 
+     (Önerilen) / İç içe gruplar)
+
+● İki soruyu da yanıtsız kapattın, buradan sonrasını netleştirmek istediğini
+  anlıyorum. Neyi açmamı istersin?
+
+  Soruların ne sorduğu kısaca şöyle:
+
+  - Segment formatı: Claude brief'i okuyup bir JSON kural döndürecek. Backend bu
+    kuralı kontrol edip güvenli bir sorguya çevirecek. Soru, kuralın şeklinin
+    ne olacağı:
+    - Olay tabanlı: Örneğin "son 30 günde cart_add olayı var, purchase olayı
+      yok". Seed verisinde ayrı bir olay (events) tablosu olur.
+    - Düz alanlar: Kullanıcı satırında hazır hesaplanmış kolonlar olur
+      (days_since_purchase gibi). Daha basit, ama daha az koşulu ifade edebilir.
+  - AND/OR: Koşullar sadece "hepsi" ya da "herhangi biri" olarak mı birleşsin,
+    yoksa "(A ve B) veya C" gibi iç içe gruplar mı olsun?
+
+  Bu kararlarla ilgili bir sorun mu var, yoksa önce başka bir konuyu mu konuşmak
+  istiyorsun (örneğin seed verisinin alanları, ya da bu kararı Claude'un nasıl
+  ürettiği)?
+
+✻ Brewed for 1m 24s · done 6:03 PM
+
+❯ yanlış bastım kankam olay tabanlı olanı beğendim fakat verdiğin sql örneği    
+  dosyada oolacak mı sadece okuyan servis böyle yazacak olarak mı verdin onu    
+  merak ediyorum ?                                                              
+
+● Updated plan  ⎿  /plan to preview
+
+● SQL hiçbir dosyada hazır yazılmayacak; akış Claude'un sadece doğrulanmış JSON
+  kural üretmesi, validator'ın whitelist/tip kontrolü yapması ve Go query
+  builder'ın değerleri parametre olarak ($1, $2) sabit SQL şablonlarına
+  bağlaması şeklinde olacak, böylece LLM çıktısı SQL metnine asla karışmıyor. Bu
+  mantığı README/DECISIONS.md'ye örnekle açıklayıp, injection değerinin sorgu
+  yapısını bozmadığını gösteren bir test yazacağım.
+
+● User answered Claude's questions:
+  ⎿  · Segment kuralında koşullar nasıl birleşsin? Sadece 'hepsi/herhangi biri' 
+     mi, yoksa '(A ve B) veya C' gibi iç içe gruplar mı? → İç içe gruplar
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~\.claude\plans\kankam-i-e-giri-i-in-smooth-raccoon.md · 
+     /plan to edit
+     Smart Campaign Composer — uygulama planı
+
+     Context
+
+     Insider One "AI Software Engineer" case'i (7 gün). Pazarlamacı brief'i →
+     Claude → segment kuralı + SMS/email → insan onayı → kuyruk → mock provider
+     → canlı dashboard.
+     Kaynak: <desktop>\mail.txt + ⧉
+     https://claude.ai/artifact/Vdtq1yNTx4buTo9A1jTvmj.
+     Puanlama: LLM %25, Mimari %20, Backend güvenilirlik %20, Frontend %20, Test
+     %15. Dört bonus da yapılacak (çekirdek bittikten sonra; CI ilk gün).
+
+     Alınan kararlar (2026-10-29)
+
+     #: D1
+     Karar: Backend Go
+     Gerekçe (DECISIONS.md'ye): Worker/concurrency/SSE doğal
+     ────────────────────────────────────────
+     #: D2
+     Karar: Postgres + Redis/Asynq
+     Gerekçe (DECISIONS.md'ye): UNIQUE ile idempotency; Asynq retry, scheduled
+     task,
+     archive(DLQ) hazır
+     ────────────────────────────────────────
+     #: D3
+     Karar: SMS ≤160 / konu ≤80 isim dahil, rune sayısı; GSM-7/UCS-2 (70)
+     uygulanmaz
+     Gerekçe (DECISIONS.md'ye): Case metni; utf8.RuneCountInString, len() değil
+     ────────────────────────────────────────
+     #: D4
+     Karar: Limit aşımında onay engellenir: kitledeki en uzun değişken değeriyle
+
+     render kontrol + gönderimde kişi bazlı kontrol
+     Gerekçe (DECISIONS.md'ye): Sessiz kitle kaybı yok
+     ────────────────────────────────────────
+     #: D5
+     Karar: İki adımlı LLM: kitle (JSON) → kullanıcı onayı → içerik (stream)
+     Gerekçe (DECISIONS.md'ye): Adımlar ayrı doğrulanır/test edilir
+     ────────────────────────────────────────
+     #: D6
+     Karar: SSE (LLM stream + dashboard)
+     Gerekçe (DECISIONS.md'ye): Tek yön yeter; stdlib + EventSource
+     ────────────────────────────────────────
+     #: D7
+     Karar: Dedup: UNIQUE(campaign_id, user_id, channel) + provider idempotency
+     key
+     Gerekçe (DECISIONS.md'ye): DB garantisi, worker crash'e dayanıklı
+     ────────────────────────────────────────
+     #: D8
+     Karar: Retry: 429/5xx/timeout → exp backoff + jitter, max 5, Retry-After'a
+     uy;
+     diğer 4xx retry yok; bitince failed + Asynq archive
+     Gerekçe (DECISIONS.md'ye):
+     ────────────────────────────────────────
+     #: D9
+     Karar: Rate limit: Redis'te kanal başına paylaşılan token bucket (100/s)
+     Gerekçe (DECISIONS.md'ye): Worker sayısından bağımsız
+     ────────────────────────────────────────
+     #: D10
+     Karar: Auth kapsam dışı (README)
+     Gerekçe (DECISIONS.md'ye):
+     ────────────────────────────────────────
+     #: D11
+     Karar: Olay tabanlı segment DSL; SQL'i Go builder üretir: alan/olay adı →
+     whitelist map'teki sabit SQL parçası, değerler $n parametresi. LLM yalnız
+     JSON üretir
+     Gerekçe (DECISIONS.md'ye): "LLM çıktısı SQL olarak çalışmaz"
+     ────────────────────────────────────────
+     #: D12
+     Karar: İç içe AND/OR grupları; varsayılan sınır: derinlik ≤3, toplam koşul
+     ≤20
+     Gerekçe (DECISIONS.md'ye): Esneklik; sınır = validator/DoS güvencesi
+
+     Varsayılanlar (itiraz yoksa): model claude-sonnet-5-5 (CLAUDE_MODEL env ile
+     değişir), resmi anthropic-sdk-go, structured output = zorunlu tool_use
+     (tool_choice) + Go tarafında şema doğrulaması; Vue 3 + Vite + TS, UI
+     kütüphanesi yok/hafif.
+
+     Segment DSL
+
+     {"match":"all","conditions":[
+       {"field":"city","op":"eq","value":"İstanbul"},
+       {"event":"cart_add","within_days":30,"exists":true},
+       {"event":"purchase","within_days":30,"exists":false},
+       {"match":"any","conditions":[ ... ]}
+     ]}
+     - field whitelist: city, language, gender, age, created_at — op: eq, neq,
+       in, gt, gte, lt, lte (alan tipine göre izinli op seti)
+     - event whitelist: cart_add, purchase, page_view — within_days 1..365
+     - Kanal izni kuraldan bağımsız, builder her zaman ekler (consent_sms /
+       consent_email).
+
+     Veri modeli (Postgres)
+
+     - users(id, first_name, last_name, email, phone, city, language, gender, 
+       birth_year, consent_sms, consent_email, created_at)
+     - events(id, user_id, type, at, amount) — index (user_id, type, at)
+     - campaigns(id, brief, status, segment_rule jsonb, scheduled_at, 
+       created_at, approved_at)
+       status: draft → audience_ready → content_ready → approved|scheduled →
+       sending → completed
+     - campaign_contents(campaign_id, channel, variant, language, subject, body)
+     - messages(id, campaign_id, user_id, channel, variant, language, status, 
+       attempts, last_error, provider_msg_id, updated_at, 
+       UNIQUE(campaign_id,user_id,channel))
+     - Seed: ~5000 user, gerçekçi dağılım (şehir, dil tr/en, izin oranları, son
+       90 günde olaylar), sabit random seed → test edilebilir sayılar.
+
+     Repo yapısı
+
+     backend/            Go modülü (tek go.mod)
+       cmd/api           HTTP + SSE
+       cmd/worker        Asynq worker + scheduler
+       cmd/mockprovider  sahte SMS/email servisi (hata/gecikme/429 oranları 
+     env'den)
+       cmd/seed          migration + seed (idempotent)
+       internal/segment  DSL tipleri, validator, SQL builder
+       internal/llm      Client arayüzü, anthropic impl, mock impl, prompt'lar
+       internal/content  render ({{first_name}}), limit kontrolü
+       internal/campaign servis + durum makinesi
+       internal/sender   task handler, retry sınıflandırma, ratelimit (Redis)
+       internal/store    pgx sorguları
+       migrations/
+     frontend/           Vue 3 + Vite
+     docker-compose.yml  postgres, redis, seed(one-shot), api, worker, 
+     mockprovider, frontend
+     Makefile            test → docker compose ile go test ./... + vitest 
+     (Windows'ta make/go gerekmeden)
+     .github/workflows/ci.yml
+     .env.example  README.md  DECISIONS.md  ai-sessions/
+     ANTHROPIC_API_KEY boşsa LLM_MODE=mock otomatik → docker compose up key'siz
+     de çalışır.
+
+     LLM güvenilirliği (en çok puanlanan kısım)
+
+     - Her çağrı zorunlu tool şemasıyla; dönen JSON Go'da unmarshal + validator.
+     - Geçersizse: hata listesi ile tek "repair" turu, yine geçersizse
+       kullanıcıya anlamlı hata.
+     - İçerik akışı: tool input_json_delta SSE ile frontend'e; bitince final
+       obje doğrulanır (limit, değişken whitelist {{first_name}}, {{last_name}},
+       {{city}}), ihlaller UI'da gösterilir.
+     - Prompt'larda şema, whitelist ve bugünün tarihi; Türkçe brief → Türkçe
+       içerik (dil bonusunda tr+en).
+     - Mock LLM: brief'e göre fixture + "önce bozuk sonra düzgün" senaryosu
+       (repair testi).
+
+     Aşamalar
+
+     0. İskelet: compose, Makefile, CI, healthz → verify: docker compose up + CI
+        yeşil
+     1. Migration + seed + segment validator/builder + POST /audience/preview
+        (count) → verify: tablo-testleri, injection testi, bilinen seed sayısı
+     2. LLM arayüzü + mock + anthropic; brief → segment → validate/repair →
+        verify: mock ile birim test, gerçek key ile manuel deneme
+     3. İçerik üretimi (SSE) + render/limit kontrolü + düzenleme + onay →
+        verify: 161/81 karakter, uzun isim engeli testleri
+     4. Gönderim: fan-out (INSERT ... ON CONFLICT DO NOTHING) → Asynq → rate
+        limit → mock provider → retry/archive → verify: duplicate enqueue,
+        provider 429/5xx, 1000 mesaj ≥10 sn testleri
+     5. Takip: SSE dashboard akışı, /metrics (Prometheus), /healthz (DB+Redis) →
+        verify: curl
+     6. Frontend: brief → kitle önizleme (kural + sayı) → stream içerik +
+        düzenleme + limit sayaçları → onay → canlı dashboard
+     7. Bonus: zamanlama (Asynq ProcessAt, iptal), A/B (hash(user_id)%2, varyant
+        metrikleri), dil (user.language, dil×varyant×kanal limit kontrolü)
+     8. Dokümantasyon + ai-sessions temizliği (email, <home>, key) +
+        temiz klon testi
+
+     Doğrulama (uçtan uca)
+
+     - Temiz klon → cp .env.example .env → docker compose up → UI'da örnek brief
+       → kitle sayısı → stream içerik → onay → dashboard'da sayılar canlı akar,
+       failed/retry görünür.
+     - make test key'siz yeşil; CI aynı komutu çalıştırır.
+     - SELECT campaign_id,user_id,channel,count(*) ... HAVING count(*)>1 boş;
+       mock provider loglarında saniyede >100/kanal yok.
+
+● Plan onaylandı, Aşama 0'dan (iskelet) başlıyorum. Önce ortamda neler kurulu
+  bakıyorum.
+
+  Ran 4 shell commands (ctrl+o to expand)
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ planı docs/plan.md olarak kayıt et                                            
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Planı <repo>\docs\plan.md olarak kaydettim.
+  Commit etmedim.
+
+  Ortamla ilgili iki not:
+  - Docker daemon çalışmıyor. Docker Desktop'ı başlatman gerekecek, yoksa docker
+    compose up denemeleri yapamayız.
+  - make kurulu değil. Plandaki gibi make test komutunu Docker üzerinden
+    çalıştıracağız. Yerelde denemek istersek make'i ayrıca kurmak gerekir.
+
+  Docker Desktop'ı açınca Aşama 0'a (iskelet) devam edeyim mi?
+
+✻ Cogitated for 9s · done 6:14 PM
+
+※ recap: Hedef, Insider One case'i için Go + Vue ile Smart Campaign Composer'ı kurmak; plan onaylandı ve docs/plan.md'ye kaydedildi, şu an Aşama 0 (iskelet) başlamak üzere. Sıradaki adım: Docker Desktop'ı açman, ben de iskeleti kurmaya başlayayım. (disable recaps in /config)
+
+❯ docker desktop açtım. make kurulu fakat belki göremiyorsundur kontrol ederiz. 
+  Şimdi plana göre bir CLAUDE.md dosyası oluşturman lazım. teknoloji klasör     
+  yapısı LLM asla doğrudan sql çıkarmaz, testler gerçek api olmadan çalışır,    
+  basit açıklanabilir kod, küçük commitler ve kısa açıklamalar, readme ve       
+  decisions taraflarının iki dilli olması. Kodlar yorumlar commit mesajları vs  
+  tamamen ingilizce olacak. güvenlik için .env gitignore a eklensin asla o      
+  dosyayı okuma yaz commitleme, yerel bu pc ait dosya yolları vs görünmesin hiç 
+  bir yerde. git hookları sakın atlama.                                         
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Write(CLAUDE.md)
+  ⎿  Wrote 59 lines to CLAUDE.md
+       1 # Smart Campaign Composer
+       2 
+       3 Insider One case study. A marketer writes a campaign brief in na
+         tural language; Claude turns it into an audience segment rule an
+         d SMS/email copy; a human reviews and approves; messages go thro
+         ugh a queue to a mock provider; a dashboard shows delivery statu
+         s live.
+       4 Full plan and decisions: `docs/plan.md`.
+       5 
+       6 ## Stack
+     … +53 lines (ctrl+o to expand)
+
+● Write(.gitignore)
+  ⎿  Wrote 9 lines to .gitignore
+      1 .env
+      2 .env.*
+      3 !.env.example
+      4 node_modules/
+      5 dist/
+      6 *.exe
+      7 *.log
+      8 .idea/
+      9 .vscode/
+
+● CLAUDE.md ve .gitignore repo kökünde hazır. Hiçbir şey commit etmedim.
+
+  CLAUDE.md şunları içeriyor:
+  - Teknoloji, klasör yapısı ve plana bağlantı (docs/plan.md).
+  - Sert kurallar: LLM asla SQL üretmez, testler gerçek API key olmadan çalışır,
+    kanal izni her zaman uygulanır, aynı mesaj iki kez gitmez, limitler
+    karakter (rune) sayar, onaysız gönderim yok.
+  - Basit ve açıklanabilir kod. Kod, yorum, commit mesajı ve log tamamen
+    İngilizce.
+  - README ve DECISIONS iki dilli (EN/TR).
+  - Küçük commitler. Git hook'ları asla atlanmaz.
+  - Güvenlik: .env okunmaz, yazılmaz, commitlenmez. Yerel yol, kullanıcı adı ve
+    kişisel e-posta hiçbir dosyada yer almaz.
+
+  .gitignore: .env, .env.* (.env.example hariç), node_modules/, dist/, *.exe,
+  *.log ve IDE klasörlerini dışarıda tutuyor.
+
+  Ortam:
+  - Docker: daemon artık çalışıyor (sunucu 29.9.2).
+  - make: make komutu yok, ama mingw32-make kurulu. Sorun şu: make test yazınca
+    bulunamaz. İki seçenek var: mingw32-make.exe dosyasının bir kopyasını
+    make.exe adıyla aynı klasöre koymak, ya da her yerde mingw32-make test
+    yazmak. README'de de make test yazacağımız için kopyalamayı öneririm.
+    İstersen yaparım.
+  - Go: go1.27.3 kurulu.
+
+  Aşama 0'a (iskelet) geçeyim mi?
+
+✻ Sautéed for 25s · done 6:25 PM
+
+※ recap: Hedef, Insider One case'i için Go + Vue ile Smart Campaign Composer'ı kurmak; plan docs/plan.md'de, CLAUDE.md ve .gitignore hazır, henüz commit yok. Sıradaki adım, onayını alınca Aşama 0 iskeletini (compose, Makefile, CI, healthz) kurmak. (disable recaps in /config)
+
+❯ claude.md dosyasında llm kısmında claude force etmişsin olmadığı senaryo da   
+  ne yapacağız ? analizde bu yoktu bak ne yazıyor Test edilebilirlik: testler   
+  gerçek API key olmadan, mock bir LLM ile çalışmalı. bunu göremedim            
+
+  Read 1 file (ctrl+o to expand)
+
+● Skill(claude-api)
+  ⎿  Successfully loaded skill · 1 tool allowed
+
+  Searched for 1 pattern, ran 2 shell commands (ctrl+o to expand)
+
+● Updated plan
+  ⎿  /plan to preview
+
+● Updated plan
+  ⎿  /plan to preview
+
+● Updated plan
+  ⎿  /plan to preview
+
+● Haklısın, bu analizde yoktu. Claude API dokümantasyonuna bakınca bir hata
+  buldum: CLAUDE.md'ye yazdığım "forced tool use" seçtiğimiz modellerde hiç 
+  çalışmıyor. Sonnet 5.5 ve Opus 5.5, tool_choice: any/tool gönderildiğinde 400
+  hatası döndürüyor. Bunu plana itiraz yoksa geçerli bir varsayılan olarak
+  yazmıştım, analizde ayrıca konuşmamıştık. Planı düzelttim (D13, D14):
+
+  - Yeni yöntem: Claude'un yerleşik yapılandırılmış çıktı özelliği
+    (output_config.format). API, Claude'un cevabını verdiğimiz JSON şemasına
+    uydurmaya zorluyor ve bu özellik streaming ile de çalışıyor.
+  - Şema her şeyi garanti etmiyor: iç içe (recursive) yapı, min/max ve uzunluk
+    sınırı tanımlanamıyor. Bu yüzden iki katmanlı kontrol olacak:
+    - Şema, JSON'un şeklini garanti eder.
+    - Go validator kuralları uygular: whitelist, 1–365 gün, 160 karakter vb.
+    - İç içe AND/OR grupları için şemayı 3 seviyeye kadar elle açıyoruz.
+
+  "Test edilebilirlik" maddesi nerede? Analizde AI-3 olarak geçiyor,
+  CLAUDE.md'de de Hard rule 2. Ama Claude'a ulaşılamadığında ya da Claude düzgün
+  cevap vermediğinde ne olacağı hiç yazılmamıştı. Plana şu tabloyu ekledim:
+
+  ┌───────────────────────────┬─────────────────────────────────────────────┐
+  │          Senaryo          │                   Ne olur                   │
+  ├───────────────────────────┼─────────────────────────────────────────────┤
+  │                           │ Mock mod devreye girer, arayüzde "MOCK"     │
+  │ Key yok                   │ rozeti görünür. Testler ve CI hep bu modda  │
+  │                           │ çalışır.                                    │
+  ├───────────────────────────┼─────────────────────────────────────────────┤
+  │ Key var, API hata veriyor │ SDK kendisi 2 kez tekrar dener. Yine        │
+  │  (429/5xx/timeout)        │ olmazsa kullanıcıya "tekrar dene" mesajı    │
+  │                           │ gösterilir. Mock'a sessizce geçilmez.       │
+  ├───────────────────────────┼─────────────────────────────────────────────┤
+  │ Claude isteği reddetti    │ Kullanıcıya "brief'i yeniden yaz" denir.    │
+  │ (refusal)                 │                                             │
+  ├───────────────────────────┼─────────────────────────────────────────────┤
+  │ Cevap yarım kaldı         │ Bir kez daha denenir, olmazsa hata          │
+  │ (max_tokens)              │ gösterilir.                                 │
+  ├───────────────────────────┼─────────────────────────────────────────────┤
+  │ JSON doğru ama kurallar   │ Hatalar Claude'a gösterilip bir düzeltme    │
+  │ geçersiz                  │ turu istenir. Yine olmazsa hatalar arayüzde │
+  │                           │  gösterilir.                                │
+  ├───────────────────────────┼─────────────────────────────────────────────┤
+  │ Kural 0 kişiye denk       │ Uyarı gösterilir, onay butonu kapalı kalır. │
+  │ geliyor                   │                                             │
+  └───────────────────────────┴─────────────────────────────────────────────┘
+
+  Her senaryo için mock LLM'de bir durum ve bir test olacak. CLAUDE.md
+  düzeltmesini de planın ilk adımı yaptım. Plan modundayız, o yüzden henüz
+  dosyaya dokunmadım.
+
+  İki karar da senin:
+● User answered Claude's questions:
+  ⎿  · Key varken Claude API hata verirse (çökme, 529, timeout) sistem ne 
+     yapsın? → Kaynaklar
+     Claude API key: Uygulama key'i .env dosyasındaki ANTHROPIC_API_KEY 
+     değişkeninden okumalı; repoya bir .env.example ekle. Geliştirme sırasında 
+     mock bir LLM ile çalışabilir, gerçek modelle denemek istersen Claude 
+     Console'dan kendi API key'ini alabilirsin.
+
+     Aşağıdakileri de kendin hazırlayacaksın:
+
+     Sahte kullanıcı verisi: birkaç bin kullanıcılık bir seed. Hangi alanlara 
+     ihtiyaç olduğuna (ad, email, telefon, şehir, alışveriş geçmişi, kanal 
+     izinleri gibi) sen karar ver.
+     Mock SMS/email provider: gerçek bir servisi taklit eden basit bir servis. 
+     Retry ve rate limit mantığını gerçekten test edebilmek için zaman zaman 
+     hata, gecikme ve 429 döndürmeli. sen 
+     https://claude.ai/artifact/Vdtq1yNTx4buTo9A1jTvmj bu linki okuduğundan emin
+     misin :D
+     · Uygulamada varsayılan Claude modeli hangisi olsun? (CLAUDE_MODEL env ile 
+     her zaman değiştirilebilir) → bunun alakası yok konuyu çok yanlış anladın.
+
+● Fark ettim ki mock LLM aslında asıl çalışma modu olabilir, gerçek key hiç
+  olmayabilir; bu yüzden mock'u farklı brief'lerden anlamlı segment/metin üretip
+  stream edebilen ve hep "MOCK" rozeti gösteren bir yapıya dönüştürmem, gerçek
+  Claude entegrasyonunu da key olmadan httptest tabanlı sahte bir Anthropic
+  sunucusuyla test etmem gerekiyor.
+
+● User answered Claude's questions:
+  ⎿  · Geliştirme sırasında kullanabileceğin bir Claude API key'in var mı? (Bunu
+     sadece plan için soruyorum; key'i bana yazma, ben .env dosyasını 
+     okumayacağım.) → Var / alacağım
+     · Mock LLM ne kadar akıllı olsun? → Basit kural tabanlı (Önerilen)
+
+● Updated plan
+  ⎿  /plan to preview
+
+● Updated plan
+  ⎿  /plan to preview
+
+● Updated plan
+  ⎿  /plan to preview
+  ⎿  User rejected Claude's plan:
+     ╭─────────────────────────────────────────────────────────────────────────╮
+     │ Smart Campaign Composer — uygulama planı                                │
+     │                                                                         │
+     │ Context                                                                 │
+     │                                                                         │
+     │ Insider One "AI Software Engineer" case'i (7 gün). Pazarlamacı brief'i  │
+     │ → Claude → segment kuralı + SMS/email → insan onayı → kuyruk → mock     │
+     │ provider → canlı dashboard.                                             │
+     │ Kaynak: <desktop>\mail.txt + ⧉                             │
+     │ https://claude.ai/artifact/Vdtq1yNTx4buTo9A1jTvmj.                      │
+     │ Puanlama: LLM %25, Mimari %20, Backend güvenilirlik %20, Frontend %20,  │
+     │ Test %15. Dört bonus da yapılacak (çekirdek bittikten sonra; CI ilk     │
+     │ gün).                                                                   │
+     │                                                                         │
+     │ Alınan kararlar (2026-10-29)                                            │
+     │                                                                         │
+     │ #: D1                                                                   │
+     │ Karar: Backend Go                                                       │
+     │ Gerekçe (DECISIONS.md'ye): Worker/concurrency/SSE doğal                 │
+     │ ────────────────────────────────────────                                │
+     │ #: D2                                                                   │
+     │ Karar: Postgres + Redis/Asynq                                           │
+     │ Gerekçe (DECISIONS.md'ye): UNIQUE ile idempotency; Asynq retry,         │
+     │ scheduled task,                                                         │
+     │ archive(DLQ) hazır                                                      │
+     │ ────────────────────────────────────────                                │
+     │ #: D3                                                                   │
+     │ Karar: SMS ≤160 / konu ≤80 isim dahil, rune sayısı; GSM-7/UCS-2 (70)    │
+     │ uygulanmaz                                                              │
+     │ Gerekçe (DECISIONS.md'ye): Case metni; utf8.RuneCountInString, len()    │
+     │ değil                                                                   │
+     │ ────────────────────────────────────────                                │
+     │ #: D4                                                                   │
+     │ Karar: Limit aşımında onay engellenir: kitledeki en uzun değişken       │
+     │ değeriyle                                                               │
+     │ render kontrol + gönderimde kişi bazlı kontrol                          │
+     │ Gerekçe (DECISIONS.md'ye): Sessiz kitle kaybı yok                       │
+     │ ────────────────────────────────────────                                │
+     │ #: D5                                                                   │
+     │ Karar: İki adımlı LLM: kitle (JSON) → kullanıcı onayı → içerik (stream) │
+     │ Gerekçe (DECISIONS.md'ye): Adımlar ayrı doğrulanır/test edilir          │
+     │ ────────────────────────────────────────                                │
+     │ #: D6                                                                   │
+     │ Karar: SSE (LLM stream + dashboard)                                     │
+     │ Gerekçe (DECISIONS.md'ye): Tek yön yeter; stdlib + EventSource          │
+     │ ────────────────────────────────────────                                │
+     │ #: D7                                                                   │
+     │ Karar: Dedup: UNIQUE(campaign_id, user_id, channel) + provider          │
+     │ idempotency key                                                         │
+     │ Gerekçe (DECISIONS.md'ye): DB garantisi, worker crash'e dayanıklı       │
+     │ ────────────────────────────────────────                                │
+     │ #: D8                                                                   │
+     │ Karar: Retry: 429/5xx/timeout → exp backoff + jitter, max 5,            │
+     │ Retry-After'a uy;                                                       │
+     │ diğer 4xx retry yok; bitince failed + Asynq archive                     │
+     │ Gerekçe (DECISIONS.md'ye):                                              │
+     │ ────────────────────────────────────────                                │
+     │ #: D9                                                                   │
+     │ Karar: Rate limit: Redis'te kanal başına paylaşılan token bucket        │
+     │ (100/s)                                                                 │
+     │ Gerekçe (DECISIONS.md'ye): Worker sayısından bağımsız                   │
+     │ ────────────────────────────────────────                                │
+     │ #: D10                                                                  │
+     │ Karar: Auth kapsam dışı (README)                                        │
+     │ Gerekçe (DECISIONS.md'ye):                                              │
+     │ ────────────────────────────────────────                                │
+     │ #: D11                                                                  │
+     │ Karar: Olay tabanlı segment DSL; SQL'i Go builder üretir: alan/olay adı │
+     │ →                                                                       │
+     │ whitelist map'teki sabit SQL parçası, değerler $n parametresi. LLM      │
+     │ yalnız                                                                  │
+     │ JSON üretir                                                             │
+     │ Gerekçe (DECISIONS.md'ye): "LLM çıktısı SQL olarak çalışmaz"            │
+     │ ────────────────────────────────────────                                │
+     │ #: D12                                                                  │
+     │ Karar: İç içe AND/OR grupları; varsayılan sınır: derinlik ≤3, toplam    │
+     │ koşul ≤20                                                               │
+     │ Gerekçe (DECISIONS.md'ye): Esneklik; sınır = validator/DoS güvencesi    │
+     │                                                                         │
+     │ | D13 | Structured output = output_config.format (JSON schema,          │
+     │ constrained decoding), forced tool_choice değil | Sonnet 5.5 / Opus 5.5 │
+     │ forced tool_choice'u 400 ile reddeder. Structured outputs streaming     │
+     │ ile çalışır |                                                           │
+     │ | D14 | Şema şekli garanti eder, kuralları Go validator uygular |       │
+     │ Structured outputs recursive şema, min/max, minLength/maxLength         │
+     │ desteklemez. Derinlik 3 şemada $defs ile açılır                         │
+     │ (group3→group2→group1→leaf) |                                           │
+     │                                                                         │
+     │ | D15 | Mock LLM birinci sınıf çalışma modu, sadece test aracı değil:   │
+     │ case "geliştirme mock ile, gerçek key isteğe bağlı" diyor;              │
+     │ değerlendirici de key'siz çalıştırabilir. Kural tabanlı: brief'ten      │
+     │ şehir, "son N gün", sepet/satın alma, %X, ton kalıplarını yakalar →     │
+     │ geçerli segment kuralı + şablon SMS/email; içeriği gecikmeli parça      │
+     │ parça stream eder; tanımadığı brief'te güvenli varsayılan kural. UI'da  │
+     │ "MOCK" rozeti | Key'siz docker compose up ile tam demo |                │
+     │ | D16 | Gerçek Anthropic entegrasyonu key'siz test edilir: httptest ile │
+     │ sahte Anthropic sunucusu, SDK option.WithBaseURL ile ona yönlenir;      │
+     │ gerçek API cevap formatları (stream event'leri, refusal, max_tokens,    │
+     │ 529) taklit edilir | LLM %25; entegrasyon kodu key olmadan doğrulanır | │
+     │ | D17 | Key varken API hatasında mock'a düşülmez; kullanıcıya hata +    │
+     │ tekrar dene | Sahte içerik gerçek gibi onaylanmasın |                   │
+     │                                                                         │
+     │ Varsayılanlar: resmi anthropic-sdk-go, model CLAUDE_MODEL env'den       │
+     │ (varsayılan claude-opus-5-5); Vue 3 + Vite + TS, UI kütüphanesi         │
+     │ yok/hafif.                                                              │
+     │ Kullanıcının key'i var: geliştirme mock ile, sonda kullanıcı gerçek key │
+     │ ile kısa manuel deneme yapar (Claude .env'i okumaz).                    │
+     │                                                                         │
+     │ LLM hata senaryoları (Claude yoksa / düzgün dönmezse)                   │
+     │                                                                         │
+     │ Senaryo: Key yok (ANTHROPIC_API_KEY boş)                                │
+     │ Davranış: LLM_MODE=mock. API + UI'da "MOCK" rozeti, log'da uyarı.       │
+     │ Testler ve CI                                                           │
+     │ hep bu modda                                                            │
+     │ ────────────────────────────────────────                                │
+     │ Senaryo: Key var, 429 / 529 / 5xx / bağlantı hatası                     │
+     │ Davranış: SDK'nın kendi retry'ı (max 2, backoff). Sonra kullanıcıya     │
+     │ "LLM şu an                                                              │
+     │ ulaşılamıyor, tekrar dene" + kampanya taslakta kalır. Mock'a sessizce   │
+     │ düşülmez (sahte içerik gerçek gibi onaylanmasın)                        │
+     │ ────────────────────────────────────────                                │
+     │ Senaryo: Timeout                                                        │
+     │ Davranış: option.WithRequestTimeout ile sınır (kitle ~30s, içerik       │
+     │ stream'i                                                                │
+     │ ~90s); aşılırsa yukarıdaki gibi hata                                    │
+     │ ────────────────────────────────────────                                │
+     │ Senaryo: stop_reason = refusal                                          │
+     │ Davranış: İçerik okunmaz, stop_details.category log'lanır, kullanıcıya  │
+     │ "brief                                                                  │
+     │ işlenemedi, yeniden yaz"                                                │
+     │ ────────────────────────────────────────                                │
+     │ Senaryo: stop_reason = max_tokens                                       │
+     │ Davranış: Çıktı eksik sayılır → bir kez daha denenir, olmazsa hata      │
+     │ ────────────────────────────────────────                                │
+     │ Senaryo: JSON şemaya uyuyor ama kural geçersiz (bilinmeyen alan,        │
+     │ within_days                                                             │
+     │ 999, SMS 170 karakter)                                                  │
+     │ Davranış: Validator hata listesiyle bir repair turu; yine geçersizse    │
+     │ kullanıcıya hatalar gösterilir, elle düzenleme mümkün                   │
+     │ ────────────────────────────────────────                                │
+     │ Senaryo: Kural geçerli ama 0 kişi                                       │
+     │ Davranış: Hata değil; UI uyarır, onay butonu kapalı                     │
+     │                                                                         │
+     │ Her satır için mock LLM'de bir senaryo + bir test olur (mock: geçerli,  │
+     │ geçersiz→repair, refusal, max_tokens, API hatası, yavaş stream). Mock   │
+     │ aynı llm.Client arayüzünü uygular; seçim sadece cmd/api başlangıcında   │
+     │ yapılır.                                                                │
+     │                                                                         │
+     │ Segment DSL                                                             │
+     │                                                                         │
+     │ {"match":"all","conditions":[                                           │
+     │   {"field":"city","op":"eq","value":"İstanbul"},                        │
+     │   {"event":"cart_add","within_days":30,"exists":true},                  │
+     │   {"event":"purchase","within_days":30,"exists":false},                 │
+     │   {"match":"any","conditions":[ ... ]}                                  │
+     │ ]}                                                                      │
+     │ - field whitelist: city, language, gender, age, created_at — op: eq,    │
+     │   neq, in, gt, gte, lt, lte (alan tipine göre izinli op seti)           │
+     │ - event whitelist: cart_add, purchase, page_view — within_days 1..365   │
+     │ - Kanal izni kuraldan bağımsız, builder her zaman ekler (consent_sms /  │
+     │   consent_email).                                                       │
+     │                                                                         │
+     │ Veri modeli (Postgres)                                                  │
+     │                                                                         │
+     │ - users(id, first_name, last_name, email, phone, city, language,        │
+     │   gender, birth_year, consent_sms, consent_email, created_at)           │
+     │ - events(id, user_id, type, at, amount) — index (user_id, type, at)     │
+     │ - campaigns(id, brief, status, segment_rule jsonb, scheduled_at,        │
+     │   created_at, approved_at)                                              │
+     │   status: draft → audience_ready → content_ready → approved|scheduled → │
+     │   sending → completed                                                   │
+     │ - campaign_contents(campaign_id, channel, variant, language, subject,   │
+     │   body)                                                                 │
+     │ - messages(id, campaign_id, user_id, channel, variant, language,        │
+     │   status, attempts, last_error, provider_msg_id, updated_at,            │
+     │   UNIQUE(campaign_id,user_id,channel))                                  │
+     │ - Seed: ~5000 user, gerçekçi dağılım (şehir, dil tr/en, izin oranları,  │
+     │   son 90 günde olaylar), sabit random seed → test edilebilir sayılar.   │
+     │                                                                         │
+     │ Repo yapısı                                                             │
+     │                                                                         │
+     │ backend/            Go modülü (tek go.mod)                              │
+     │   cmd/api           HTTP + SSE                                          │
+     │   cmd/worker        Asynq worker + scheduler                            │
+     │   cmd/mockprovider  sahte SMS/email servisi (hata/gecikme/429 oranları  │
+     │ env'den)                                                                │
+     │   cmd/seed          migration + seed (idempotent)                       │
+     │   internal/segment  DSL tipleri, validator, SQL builder                 │
+     │   internal/llm      Client arayüzü, anthropic impl, mock impl,          │
+     │ prompt'lar                                                              │
+     │   internal/content  render ({{first_name}}), limit kontrolü             │
+     │   internal/campaign servis + durum makinesi                             │
+     │   internal/sender   task handler, retry sınıflandırma, ratelimit        │
+     │ (Redis)                                                                 │
+     │   internal/store    pgx sorguları                                       │
+     │   migrations/                                                           │
+     │ frontend/           Vue 3 + Vite                                        │
+     │ docker-compose.yml  postgres, redis, seed(one-shot), api, worker,       │
+     │ mockprovider, frontend                                                  │
+     │ Makefile            test → docker compose ile go test ./... + vitest    │
+     │ (Windows'ta make/go gerekmeden)                                         │
+     │ .github/workflows/ci.yml                                                │
+     │ .env.example  README.md  DECISIONS.md  ai-sessions/                     │
+     │ ANTHROPIC_API_KEY boşsa LLM_MODE=mock otomatik → docker compose up      │
+     │ key'siz de çalışır.                                                     │
+     │                                                                         │
+     │ LLM güvenilirliği (en çok puanlanan kısım)                              │
+     │                                                                         │
+     │ - Her çağrı output_config.format JSON şemasıyla; dönen JSON Go'da       │
+     │   unmarshal + validator. stop_reason her zaman önce kontrol edilir.     │
+     │ - Geçersizse: hata listesi ile tek "repair" turu, yine geçersizse       │
+     │   kullanıcıya anlamlı hata (bkz. "LLM hata senaryoları").               │
+     │ - İçerik akışı: text delta'ları (JSON parçaları) SSE ile frontend'e;    │
+     │   bitince final obje doğrulanır (limit, değişken whitelist              │
+     │   {{first_name}}, {{last_name}}, {{city}}), ihlaller UI'da gösterilir.  │
+     │ - Prompt'larda şema, whitelist ve bugünün tarihi; Türkçe brief → Türkçe │
+     │   içerik (dil bonusunda tr+en).                                         │
+     │ - Mock LLM: brief'e göre fixture + "önce bozuk sonra düzgün" senaryosu  │
+     │   (repair testi).                                                       │
+     │                                                                         │
+     │ Aşamalar                                                                │
+     │                                                                         │
+     │ -1. CLAUDE.md düzeltmesi: "forced tool use" → "structured outputs       │
+     │ (output_config.format) + Go validator"; Hard rule 2 genişler: mock LLM  │
+     │ birinci sınıf mod (D15), Anthropic entegrasyonu sahte sunucuyla test    │
+     │ edilir (D16), key varken hatada mock'a düşülmez (D17); docs/plan.md bu  │
+     │ planla güncellenir                                                      │
+     │ 0. İskelet: compose, Makefile, CI, healthz → verify: docker compose up  │
+     │ + CI yeşil                                                              │
+     │ 1. Migration + seed + segment validator/builder + POST                  │
+     │    /audience/preview (count) → verify: tablo-testleri, injection testi, │
+     │    bilinen seed sayısı                                                  │
+     │ 2. LLM arayüzü + kural tabanlı mock + anthropic impl; brief → segment → │
+     │    validate/repair → verify: mock birim testleri, sahte Anthropic       │
+     │    sunucusu testleri (D16); en sonda kullanıcı gerçek key ile manuel    │
+     │    dener                                                                │
+     │ 3. İçerik üretimi (SSE) + render/limit kontrolü + düzenleme + onay →    │
+     │    verify: 161/81 karakter, uzun isim engeli testleri                   │
+     │ 4. Gönderim: fan-out (INSERT ... ON CONFLICT DO NOTHING) → Asynq → rate │
+     │    limit → mock provider → retry/archive → verify: duplicate enqueue,   │
+     │    provider 429/5xx, 1000 mesaj ≥10 sn testleri                         │
+     │ 5. Takip: SSE dashboard akışı, /metrics (Prometheus), /healthz          │
+     │    (DB+Redis) → verify: curl                                            │
+     │ 6. Frontend: brief → kitle önizleme (kural + sayı) → stream içerik +    │
+     │    düzenleme + limit sayaçları → onay → canlı dashboard                 │
+     │ 7. Bonus: zamanlama (Asynq ProcessAt, iptal), A/B (hash(user_id)%2,     │
+     │    varyant metrikleri), dil (user.language, dil×varyant×kanal limit     │
+     │    kontrolü)                                                            │
+     │ 8. Dokümantasyon + ai-sessions temizliği (email, <home>, key) + │
+     │    temiz klon testi                                                     │
+     │                                                                         │
+     │ Doğrulama (uçtan uca)                                                   │
+     │                                                                         │
+     │ - Temiz klon → cp .env.example .env → docker compose up → UI'da örnek   │
+     │   brief → kitle sayısı → stream içerik → onay → dashboard'da sayılar    │
+     │   canlı akar, failed/retry görünür.                                     │
+     │ - make test key'siz yeşil; CI aynı komutu çalıştırır.                   │
+     │ - SELECT campaign_id,user_id,channel,count(*) ... HAVING count(*)>1     │
+     │   boş; mock provider loglarında saniyede >100/kanal yok.                │
+     ╰─────────────────────────────────────────────────────────────────────────╯
+
+● "Forced tool use", Claude API'deki tool_choice parametresinin bir ayarı.
+  "Claude API'yi zorla kullanmak" anlamına gelmiyor, karışıklık ondan çıktı.
+
+  Ne işe yarar: Claude'a bir "araç" (tool) tanımlarsın, örneğin create_segment,
+  ve parametrelerini JSON şemasıyla verirsin. Normalde Claude bu aracı kullanıp
+  kullanmamaya kendisi karar verir (tool_choice: auto). "Forced" ayarında
+  (tool_choice: tool ya da any) Claude'u o aracı mutlaka çağırmaya zorlarsın.
+  Cevap düz metin olarak gelmez, şemaya uygun bir JSON parametre olarak gelir.
+  Eskiden Claude'dan güvenilir JSON almanın yaygın hilesi buydu.
+
+  Neden vazgeçtik: Seçtiğimiz güncel modeller (Opus 5.5, Sonnet 5.5) bu ayarı
+  artık kabul etmiyor, 400 hatası dönüyor. Bunun yerine aynı işi doğrudan yapan
+  bir özellik var: structured outputs (output_config.format). Claude'a "cevabın
+  bu JSON şemasına uysun" diyorsun, API çıktıyı o şemaya uydurmaya zorluyor.
+  Araç tanımlamaya gerek kalmıyor.
+
+  Bizim için değişen: Sadece Claude'dan JSON'u alma yöntemi. Geri kalan her şey
+  aynı kalıyor: JSON'u Go'da yine doğrulayacağız, mock LLM de yine aynı arayüzü
+  kullanacak.
+
+✻ Baked for 2m 28s · done 6:57 PM
+
+❯ tamamdır. ben mock olayını iptal ettin claude force ediyorsun sadece sandım   
+  pardon                                                                        
+  ⎿  ⧉ Selected 1 lines from CLAUDE.md in Visual Studio Code
+
+● Sorun değil. Mock iptal olmadı, tam tersine daha da güçlendi:
+
+  - Key yoksa uygulama baştan sona mock LLM ile çalışacak. Kural tabanlı mock
+    brief'ten gerçek bir kural ve metin üretecek, metni stream edecek, ekranda
+    "MOCK" rozeti görünecek.
+  - Testler her zaman key olmadan çalışacak.
+  - Gerçek Claude entegrasyonu da key olmadan, sahte bir Anthropic sunucusuyla
+    test edilecek.
+  - Key varsa gerçek Claude kullanılacak. "Force" kelimesi sadece JSON alma
+    yöntemini anlatıyordu, o da artık structured outputs ile değişti.
+
+  CLAUDE.md'deki o "force" ifadesi planın ilk adımında düzelecek.
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~\.claude\plans\kankam-i-e-giri-i-in-smooth-raccoon.md · 
+     /plan to edit
+     Smart Campaign Composer — uygulama planı
+
+     Context
+
+     Insider One "AI Software Engineer" case'i (7 gün). Pazarlamacı brief'i →
+     Claude → segment kuralı + SMS/email → insan onayı → kuyruk → mock provider
+     → canlı dashboard.
+     Kaynak: <desktop>\mail.txt + ⧉
+     https://claude.ai/artifact/Vdtq1yNTx4buTo9A1jTvmj.
+     Puanlama: LLM %25, Mimari %20, Backend güvenilirlik %20, Frontend %20, Test
+     %15. Dört bonus da yapılacak (çekirdek bittikten sonra; CI ilk gün).
+
+     Alınan kararlar (2026-10-29)
+
+     #: D1
+     Karar: Backend Go
+     Gerekçe (DECISIONS.md'ye): Worker/concurrency/SSE doğal
+     ────────────────────────────────────────
+     #: D2
+     Karar: Postgres + Redis/Asynq
+     Gerekçe (DECISIONS.md'ye): UNIQUE ile idempotency; Asynq retry, scheduled
+     task,
+     archive(DLQ) hazır
+     ────────────────────────────────────────
+     #: D3
+     Karar: SMS ≤160 / konu ≤80 isim dahil, rune sayısı; GSM-7/UCS-2 (70)
+     uygulanmaz
+     Gerekçe (DECISIONS.md'ye): Case metni; utf8.RuneCountInString, len() değil
+     ────────────────────────────────────────
+     #: D4
+     Karar: Limit aşımında onay engellenir: kitledeki en uzun değişken değeriyle
+
+     render kontrol + gönderimde kişi bazlı kontrol
+     Gerekçe (DECISIONS.md'ye): Sessiz kitle kaybı yok
+     ────────────────────────────────────────
+     #: D5
+     Karar: İki adımlı LLM: kitle (JSON) → kullanıcı onayı → içerik (stream)
+     Gerekçe (DECISIONS.md'ye): Adımlar ayrı doğrulanır/test edilir
+     ────────────────────────────────────────
+     #: D6
+     Karar: SSE (LLM stream + dashboard)
+     Gerekçe (DECISIONS.md'ye): Tek yön yeter; stdlib + EventSource
+     ────────────────────────────────────────
+     #: D7
+     Karar: Dedup: UNIQUE(campaign_id, user_id, channel) + provider idempotency
+     key
+     Gerekçe (DECISIONS.md'ye): DB garantisi, worker crash'e dayanıklı
+     ────────────────────────────────────────
+     #: D8
+     Karar: Retry: 429/5xx/timeout → exp backoff + jitter, max 5, Retry-After'a
+     uy;
+     diğer 4xx retry yok; bitince failed + Asynq archive
+     Gerekçe (DECISIONS.md'ye):
+     ────────────────────────────────────────
+     #: D9
+     Karar: Rate limit: Redis'te kanal başına paylaşılan token bucket (100/s)
+     Gerekçe (DECISIONS.md'ye): Worker sayısından bağımsız
+     ────────────────────────────────────────
+     #: D10
+     Karar: Auth kapsam dışı (README)
+     Gerekçe (DECISIONS.md'ye):
+     ────────────────────────────────────────
+     #: D11
+     Karar: Olay tabanlı segment DSL; SQL'i Go builder üretir: alan/olay adı →
+     whitelist map'teki sabit SQL parçası, değerler $n parametresi. LLM yalnız
+     JSON üretir
+     Gerekçe (DECISIONS.md'ye): "LLM çıktısı SQL olarak çalışmaz"
+     ────────────────────────────────────────
+     #: D12
+     Karar: İç içe AND/OR grupları; varsayılan sınır: derinlik ≤3, toplam koşul
+     ≤20
+     Gerekçe (DECISIONS.md'ye): Esneklik; sınır = validator/DoS güvencesi
+
+     | D13 | Structured output = output_config.format (JSON schema, constrained 
+     decoding), forced tool_choice değil | Sonnet 5.5 / Opus 5.5 forced
+     tool_choice'u 400 ile reddeder. Structured outputs streaming ile çalışır |
+     | D14 | Şema şekli garanti eder, kuralları Go validator uygular |
+     Structured outputs recursive şema, min/max, minLength/maxLength
+     desteklemez. Derinlik 3 şemada $defs ile açılır (group3→group2→group1→leaf)
+     |
+
+     | D15 | Mock LLM birinci sınıf çalışma modu, sadece test aracı değil: case
+     "geliştirme mock ile, gerçek key isteğe bağlı" diyor; değerlendirici de
+     key'siz çalıştırabilir. Kural tabanlı: brief'ten şehir, "son N gün",
+     sepet/satın alma, %X, ton kalıplarını yakalar → geçerli segment kuralı +
+     şablon SMS/email; içeriği gecikmeli parça parça stream eder; tanımadığı
+     brief'te güvenli varsayılan kural. UI'da "MOCK" rozeti | Key'siz docker 
+     compose up ile tam demo |
+     | D16 | Gerçek Anthropic entegrasyonu key'siz test edilir: httptest ile
+     sahte Anthropic sunucusu, SDK option.WithBaseURL ile ona yönlenir; gerçek
+     API cevap formatları (stream event'leri, refusal, max_tokens, 529) taklit
+     edilir | LLM %25; entegrasyon kodu key olmadan doğrulanır |
+     | D17 | Key varken API hatasında mock'a düşülmez; kullanıcıya hata + tekrar
+     dene | Sahte içerik gerçek gibi onaylanmasın |
+
+     Varsayılanlar: resmi anthropic-sdk-go, model CLAUDE_MODEL env'den
+     (varsayılan claude-opus-5-5); Vue 3 + Vite + TS, UI kütüphanesi yok/hafif.
+     Kullanıcının key'i var: geliştirme mock ile, sonda kullanıcı gerçek key ile
+     kısa manuel deneme yapar (Claude .env'i okumaz).
+
+     LLM hata senaryoları (Claude yoksa / düzgün dönmezse)
+
+     Senaryo: Key yok (ANTHROPIC_API_KEY boş)
+     Davranış: LLM_MODE=mock. API + UI'da "MOCK" rozeti, log'da uyarı. Testler
+     ve CI
+     hep bu modda
+     ────────────────────────────────────────
+     Senaryo: Key var, 429 / 529 / 5xx / bağlantı hatası
+     Davranış: SDK'nın kendi retry'ı (max 2, backoff). Sonra kullanıcıya "LLM şu
+     an
+     ulaşılamıyor, tekrar dene" + kampanya taslakta kalır. Mock'a sessizce  
+     düşülmez (sahte içerik gerçek gibi onaylanmasın)
+     ────────────────────────────────────────
+     Senaryo: Timeout
+     Davranış: option.WithRequestTimeout ile sınır (kitle ~30s, içerik stream'i
+     ~90s); aşılırsa yukarıdaki gibi hata
+     ────────────────────────────────────────
+     Senaryo: stop_reason = refusal
+     Davranış: İçerik okunmaz, stop_details.category log'lanır, kullanıcıya
+     "brief
+     işlenemedi, yeniden yaz"
+     ────────────────────────────────────────
+     Senaryo: stop_reason = max_tokens
+     Davranış: Çıktı eksik sayılır → bir kez daha denenir, olmazsa hata
+     ────────────────────────────────────────
+     Senaryo: JSON şemaya uyuyor ama kural geçersiz (bilinmeyen alan,
+     within_days
+     999, SMS 170 karakter)
+     Davranış: Validator hata listesiyle bir repair turu; yine geçersizse
+     kullanıcıya hatalar gösterilir, elle düzenleme mümkün
+     ────────────────────────────────────────
+     Senaryo: Kural geçerli ama 0 kişi
+     Davranış: Hata değil; UI uyarır, onay butonu kapalı
+
+     Her satır için mock LLM'de bir senaryo + bir test olur (mock: geçerli,
+     geçersiz→repair, refusal, max_tokens, API hatası, yavaş stream). Mock aynı
+     llm.Client arayüzünü uygular; seçim sadece cmd/api başlangıcında yapılır.
+
+     Segment DSL
+
+     {"match":"all","conditions":[
+       {"field":"city","op":"eq","value":"İstanbul"},
+       {"event":"cart_add","within_days":30,"exists":true},
+       {"event":"purchase","within_days":30,"exists":false},
+       {"match":"any","conditions":[ ... ]}
+     ]}
+     - field whitelist: city, language, gender, age, created_at — op: eq, neq,
+       in, gt, gte, lt, lte (alan tipine göre izinli op seti)
+     - event whitelist: cart_add, purchase, page_view — within_days 1..365
+     - Kanal izni kuraldan bağımsız, builder her zaman ekler (consent_sms /
+       consent_email).
+
+     Veri modeli (Postgres)
+
+     - users(id, first_name, last_name, email, phone, city, language, gender, 
+       birth_year, consent_sms, consent_email, created_at)
+     - events(id, user_id, type, at, amount) — index (user_id, type, at)
+     - campaigns(id, brief, status, segment_rule jsonb, scheduled_at, 
+       created_at, approved_at)
+       status: draft → audience_ready → content_ready → approved|scheduled →
+       sending → completed
+     - campaign_contents(campaign_id, channel, variant, language, subject, body)
+     - messages(id, campaign_id, user_id, channel, variant, language, status, 
+       attempts, last_error, provider_msg_id, updated_at, 
+       UNIQUE(campaign_id,user_id,channel))
+     - Seed: ~5000 user, gerçekçi dağılım (şehir, dil tr/en, izin oranları, son
+       90 günde olaylar), sabit random seed → test edilebilir sayılar.
+
+     Repo yapısı
+
+     backend/            Go modülü (tek go.mod)
+       cmd/api           HTTP + SSE
+       cmd/worker        Asynq worker + scheduler
+       cmd/mockprovider  sahte SMS/email servisi (hata/gecikme/429 oranları 
+     env'den)
+       cmd/seed          migration + seed (idempotent)
+       internal/segment  DSL tipleri, validator, SQL builder
+       internal/llm      Client arayüzü, anthropic impl, mock impl, prompt'lar
+       internal/content  render ({{first_name}}), limit kontrolü
+       internal/campaign servis + durum makinesi
+       internal/sender   task handler, retry sınıflandırma, ratelimit (Redis)
+       internal/store    pgx sorguları
+       migrations/
+     frontend/           Vue 3 + Vite
+     docker-compose.yml  postgres, redis, seed(one-shot), api, worker, 
+     mockprovider, frontend
+     Makefile            test → docker compose ile go test ./... + vitest 
+     (Windows'ta make/go gerekmeden)
+     .github/workflows/ci.yml
+     .env.example  README.md  DECISIONS.md  ai-sessions/
+     ANTHROPIC_API_KEY boşsa LLM_MODE=mock otomatik → docker compose up key'siz
+     de çalışır.
+
+     LLM güvenilirliği (en çok puanlanan kısım)
+
+     - Her çağrı output_config.format JSON şemasıyla; dönen JSON Go'da unmarshal
+       + validator. stop_reason her zaman önce kontrol edilir.
+     - Geçersizse: hata listesi ile tek "repair" turu, yine geçersizse
+       kullanıcıya anlamlı hata (bkz. "LLM hata senaryoları").
+     - İçerik akışı: text delta'ları (JSON parçaları) SSE ile frontend'e;
+       bitince final obje doğrulanır (limit, değişken whitelist {{first_name}},
+       {{last_name}}, {{city}}), ihlaller UI'da gösterilir.
+     - Prompt'larda şema, whitelist ve bugünün tarihi; Türkçe brief → Türkçe
+       içerik (dil bonusunda tr+en).
+     - Mock LLM: brief'e göre fixture + "önce bozuk sonra düzgün" senaryosu
+       (repair testi).
+
+     Aşamalar
+
+     -1. CLAUDE.md düzeltmesi: "forced tool use" → "structured outputs
+     (output_config.format) + Go validator"; Hard rule 2 genişler: mock LLM
+     birinci sınıf mod (D15), Anthropic entegrasyonu sahte sunucuyla test edilir
+     (D16), key varken hatada mock'a düşülmez (D17); docs/plan.md bu planla
+     güncellenir
+     0. İskelet: compose, Makefile, CI, healthz → verify: docker compose up + CI
+     yeşil
+     1. Migration + seed + segment validator/builder + POST /audience/preview
+        (count) → verify: tablo-testleri, injection testi, bilinen seed sayısı
+     2. LLM arayüzü + kural tabanlı mock + anthropic impl; brief → segment →
+        validate/repair → verify: mock birim testleri, sahte Anthropic sunucusu
+        testleri (D16); en sonda kullanıcı gerçek key ile manuel dener
+     3. İçerik üretimi (SSE) + render/limit kontrolü + düzenleme + onay →
+        verify: 161/81 karakter, uzun isim engeli testleri
+     4. Gönderim: fan-out (INSERT ... ON CONFLICT DO NOTHING) → Asynq → rate
+        limit → mock provider → retry/archive → verify: duplicate enqueue,
+        provider 429/5xx, 1000 mesaj ≥10 sn testleri
+     5. Takip: SSE dashboard akışı, /metrics (Prometheus), /healthz (DB+Redis) →
+        verify: curl
+     6. Frontend: brief → kitle önizleme (kural + sayı) → stream içerik +
+        düzenleme + limit sayaçları → onay → canlı dashboard
+     7. Bonus: zamanlama (Asynq ProcessAt, iptal), A/B (hash(user_id)%2, varyant
+        metrikleri), dil (user.language, dil×varyant×kanal limit kontrolü)
+     8. Dokümantasyon + ai-sessions temizliği (email, <home>, key) +
+        temiz klon testi
+
+     Doğrulama (uçtan uca)
+
+     - Temiz klon → cp .env.example .env → docker compose up → UI'da örnek brief
+       → kitle sayısı → stream içerik → onay → dashboard'da sayılar canlı akar,
+       failed/retry görünür.
+     - make test key'siz yeşil; CI aynı komutu çalıştırır.
+     - SELECT campaign_id,user_id,channel,count(*) ... HAVING count(*)>1 boş;
+       mock provider loglarında saniyede >100/kanal yok.
+
+● Aşama -1'den başlıyorum: CLAUDE.md düzeltmesi ve docs/plan.md güncellemesi.
+
+● Update(CLAUDE.md)
+  ⎿  Added 1 line, removed 1 line
+       6  ## Stack
+       7  - Backend: Go (single module), Postgres, Redis + Asynq (queue, 
+          retry, scheduled tasks, archive/DLQ)
+       8  - Frontend: Vue 3 + Vite + TypeScript, light dependencies
+       9 -- LLM: Claude via `anthropic-sdk-go`, forced tool use for struc
+         -tured JSON output                                              
+       9 +- LLM: Claude via `anthropic-sdk-go`, structured JSON output vi
+         +a `output_config.format` (JSON schema). Forced `tool_choice` is
+         + rejected by the current models. The schema guarantees shape on
+         +ly; Go validators enforce the rules (limits, whitelists, depth)
+         +.                                                              
+      10  - Live updates: SSE (LLM content stream and dashboard)
+      11  - Run: `docker compose up`. Tests: `make test` (runs inside Doc
+          ker, no local toolchain needed)
+      12  
+
+● Update(CLAUDE.md)
+  ⎿  Added 4 lines, removed 1 line
+      32  
+      33  ## Hard rules
+      34  1. **The LLM never produces SQL.** It only returns a JSON segme
+          nt rule. Go validates it against whitelists (fields, operators,
+           events, value types, depth <= 3, conditions <= 20) and builds 
+          parameterized SQL from fixed fragments. Values always go throug
+          h `$n` parameters.
+      35 -2. **Tests never need a real API key.** All LLM access goes thr
+         -ough the `llm.Client` interface; tests use the mock implementat
+         -ion. `ANTHROPIC_API_KEY` empty means mock mode.                
+      35 +2. **Tests never need a real API key.** All LLM access goes thr
+         +ough the `llm.Client` interface.                               
+      36 +   - The mock LLM is a first-class mode, not only a test helper
+         +: rule-based, produces a valid segment rule and template copy f
+         +rom the brief, streams it with small delays. `ANTHROPIC_API_KEY
+         +` empty means mock mode, and the UI shows a "MOCK" badge.      
+      37 +   - The real Anthropic client is tested against a fake HTTP se
+         +rver (`httptest` + SDK base URL override) that imitates stream 
+         +events, refusal, max_tokens, and 429/529.                      
+      38 +   - With a real key, an API failure is shown to the user with 
+         +a retry option. Never silently fall back to mock.              
+      39  3. **Channel consent is always enforced** by the SQL builder, i
+          ndependent of the rule.
+      40  4. **No duplicate sends.** `UNIQUE(campaign_id, user_id, channe
+          l)` in the database plus an idempotency key to the provider.
+      41  5. **Limits count runes, not bytes**: SMS <= 160, email subject
+           <= 80, with personalization values included. Use `utf8.RuneCou
+          ntInString`.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● docs/plan.md içinde iki yerde yerel dosya yolu geçiyor. Bu senin "yerel yol
+  görünmesin" kuralına aykırı, o yüzden temizliyorum.
+
+● Update(docs\plan.md)
+  ⎿  Added 1 line, removed 1 line
+      2  
+      3  ## Context
+      4  Insider One "AI Software Engineer" case'i (7 gün). Pazarlamacı b
+         rief'i → Claude → segment kuralı + SMS/email → insan onayı → kuy
+         ruk → mock provider → canlı dashboard.
+      5 -Kaynak: `<desktop>\mail.txt` + https://claude.ai/ar
+        -tifact/Vdtq1yNTx4buTo9A1jTvmj.                                  
+      5 +Kaynak: Insider One'dan gelen mail + https://claude.ai/artifact/
+        +Vdtq1yNTx4buTo9A1jTvmj.                                         
+      6  Puanlama: LLM %25, Mimari %20, Backend güvenilirlik %20, Fronten
+         d %20, Test %15. Dört bonus da yapılacak (çekirdek bittikten son
+         ra; CI ilk gün).
+      7  
+      8  ## Alınan kararlar (2026-10-29)
+
+● Update(docs\plan.md)
+  ⎿  Added 1 line, removed 1 line
+      105  5. Takip: SSE dashboard akışı, `/metrics` (Prometheus), `/heal
+           thz` (DB+Redis) → verify: curl
+      106  6. Frontend: brief → kitle önizleme (kural + sayı) → stream iç
+           erik + düzenleme + limit sayaçları → onay → canlı dashboard
+      107  7. Bonus: zamanlama (Asynq ProcessAt, iptal), A/B (`hash(user_
+           id)%2`, varyant metrikleri), dil (user.language, dil×varyant×k
+           anal limit kontrolü)
+      108 -8. Dokümantasyon + ai-sessions temizliği (email, `<home>
+          -tg`, key) + temiz klon testi                                  
+      108 +8. Dokümantasyon + ai-sessions temizliği (e-posta, yerel dosya
+          + yolları, key) + temiz klon testi                             
+      109  
+      110  ## Doğrulama (uçtan uca)
+      111  - Temiz klon → `cp .env.example .env` → `docker compose up` → 
+           UI'da örnek brief → kitle sayısı → stream içerik → onay → dash
+           board'da sayılar canlı akar, failed/retry görünür.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Aşama -1 tamamlandı. Hiçbir şey commit etmedim.
+
+  - CLAUDE.md:
+    - "Forced tool use" ifadesi kaldırıldı, yerine output_config.format ve Go
+      doğrulaması yazıldı.
+    - Kural 2 genişledi: mock LLM birinci sınıf bir mod. Gerçek Claude istemcisi
+      sahte HTTP sunucusuyla test ediliyor. Key varken API hata verirse
+      sessizce mock'a geçilmiyor.
+  - docs/plan.md: Onaylanan son planla güncellendi. İçinde yerel dosya yolu
+    geçen iki satır vardı, onları temizledim. Dosyalarda <user> ya da C:\Users
+    ifadesi kalmadı.
+  - Git durumu: .gitignore, CLAUDE.md ve docs/ henüz commitlenmemiş (untracked).
+
+  Sıradaki adım Aşama 0, yani iskelet: docker-compose.yml, Go modülü, /healthz,
+  Makefile ve CI. Önce bu üç dosyayı ilk commit olarak atmamı ister misin, yoksa
+  iskeletle birlikte mi gidelim?
+
+✻ Baked for 36s · done 6:59 PM
+
+❯ docs klasörüne DECISIONS.md ekleyelim. README.md dosyamızı da ekleyelim       
+  sonra. bu işlemler bitince commit push tekrar sor.                            
+  ⎿  ⧉ Selected 1 lines from CLAUDE.md in Visual Studio Code
+
+● İkisini de yazıyorum. Kod henüz olmadığı için README'de çalışan özellik iddia
+  etmeyeceğim, durumu "planlandı" olarak işaretleyeceğim.
+
+● Write(docs\DECISIONS.md)
+  ⎿  Wrote 80 lines to docs\DECISIONS.md
+       1 # Decisions / Kararlar
+       2 
+       3 Each decision lists the choice, the reason, and the main alterna
+         tive. Each section is written in English and Turkish.
+       4 Her kararda seçim, neden ve başlıca alternatif yer alır. Her böl
+         üm İngilizce ve Türkçe yazılmıştır.
+       5 
+       6 ## D1. Backend language: Go / Backend dili: Go
+       7 - **EN:** Go. Workers, concurrency, and SSE are natural in Go; o
+         ne small binary per service. Alternative: PHP (less natural for 
+     … +74 lines (~10 KB) (ctrl+o to expand)
+● Write(README.md)
+  ⎿  Wrote 70 lines to README.md
+      1 # Smart Campaign Composer
+      2 
+      3 A marketer writes a campaign brief in plain language. Claude turn
+        s it into an audience segment and SMS/email copy, a human reviews
+         and approves, messages go through a queue to a mock provider, an
+        d a dashboard shows delivery status live. No real message is ever
+         sent.
+      4 
+      5 Pazarlamacı kampanya isteğini doğal dille yazar. Claude bunu hede
+        f kitleye ve SMS/email metinlerine çevirir, bir insan inceleyip o
+     … +66 lines (~5 KB) (ctrl+o to expand)
+
+● Yazarken bir yerde Türkçe metne yanlış bir harf karışmış olabilir, kontrol
+  ediyorum. Yerel bilgi taramasını da yeniden yapıyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Bu grep çıktısı güvenilir değil, neredeyse her satırı eşleştirmiş (yerel dil
+  ayarı yüzünden). Aynı kontrolü Python ile yapıyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Tahmin doğruymuş: D4'ün Türkçe satırında "göstеririz" kelimesine Kiril harfi е
+  karışmış. Düzeltiyorum.
+
+● Update(docs\DECISIONS.md)
+  ⎿  Error editing file
+
+● Edit aracında iki metin görünürde aynı olduğu için işe yaramadı. Karakteri
+  Python ile değiştiriyorum.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● D4'ün Türkçe satırındaki yanlış Kiril harfi е'yi Latin e ile düzelttim; başka
+  Kiril karakter, yerel yol ya da kişisel bilgi yok. Henüz commit yapılmadı,
+  master dalında ve origin remote'u mevcut — commit ve push için onayını
+  bekliyorum. · summary
+
+● User answered Claude's questions:
+  ⎿  · Commit ve push nasıl yapılsın? → desicion.md içinde sadece önemli 
+     kararlar tutulmalı. sen kararların alternatiflerini yazmışsın gereksiz. 
+     başlıkta problemi görmeliyim altta ise verilen kararı. mesela D10 kimlik 
+     doğrulaması lafı geçmeyen bir mevzu karar mı verdim ki benim kararım gibi 
+     orada duruor 
+
+● DECISIONS.md'yi yeniden yazıyorum: başlıklar sorunu, altında kararı ve tek
+  cümlelik nedeni gösterecek; D10'u çıkarıyorum (README'de zaten var), D12'yi
+  D11'e, D14'ü D13'e birleştiriyorum. · summary
+
+● Write(docs\DECISIONS.md)
+  ⎿  Added 32 lines, removed 68 lines
+       1  # Decisions / Kararlar
+       2  
+       3 -Each decision lists the choice, the reason, and the main altern
+         -ative. Each section is written in English and Turkish.         
+       4 -Her kararda seçim, neden ve başlıca alternatif yer alır. Her bö
+         -lüm İngilizce ve Türkçe yazılmıştır.                           
+       3 +Only the important decisions. Each heading is the problem; belo
+         +w it is what we decided and why. English and Turkish.          
+       4 +Sadece önemli kararlar. Her başlık problemi, altı alınan kararı
+         + ve nedenini gösterir. İngilizce ve Türkçe.                    
+       5  
+       6 -## D1. Backend language: Go / Backend dili: Go                 
+       7 -- **EN:** Go. Workers, concurrency, and SSE are natural in Go; 
+         -one small binary per service. Alternative: PHP (less natural fo
+         -r long-running workers and streaming).                         
+       8 -- **TR:** Go. Worker, eşzamanlılık ve SSE Go'da doğal; her serv
+         -is tek küçük binary. Alternatif: PHP (uzun süren worker ve stre
+         -aming için daha az uygun).                                     
+       6 +## 1. How do we keep LLM output away from the database? / LLM ç
+         +ıktısı veritabanından nasıl uzak tutulur?                      
+       7 +- **EN:** The LLM returns only a JSON segment rule. Go validate
+         +s it against whitelists (fields, operators, events, value types
+         +, nesting depth <= 3, <= 20 conditions) and builds parameterize
+         +d SQL from fixed fragments; values always go through `$n` param
+         +eters. The LLM never writes SQL.                               
+       8 +- **TR:** LLM sadece JSON segment kuralı döndürür. Go kuralı wh
+         +itelist'lere göre doğrular (alan, operatör, olay, değer tipi, i
+         +ç içe en fazla 3 seviye, en fazla 20 koşul) ve sabit SQL parçal
+         +arından parametreli sorgu üretir; değerler her zaman `$n` param
+         +etresiyle gider. LLM hiçbir zaman SQL yazmaz.                  
+       9  
+      10 -## D2. Storage and queue: Postgres + Redis/Asynq / Depolama ve 
+         -kuyruk                                                         
+      11 -- **EN:** Postgres for data, Redis with Asynq for the queue. As
+         -ynq gives retries, scheduled tasks (needed for the scheduling b
+         -onus), and an archive (our dead-letter queue). Alternatives: Po
+         -stgres-only queue (fewer services, but retry and scheduling wri
+         -tten by hand), RabbitMQ (too heavy for this scale).            
+      12 -- **TR:** Veri için Postgres, kuyruk için Redis + Asynq. Asynq 
+         -retry, zamanlanmış görev (zamanlama bonusu için gerekli) ve arc
+         -hive (ölü mesaj kuyruğumuz) sağlar. Alternatifler: sadece Postg
+         -res kuyruğu (daha az servis, ama retry ve zamanlama elle yazılı
+         -r), RabbitMQ (bu ölçek için fazla ağır).                       
+      10 +## 2. How do we get reliable JSON from Claude? / Claude'dan güv
+         +enilir JSON nasıl alınır?                                      
+      11 +- **EN:** Structured outputs (`output_config.format`) with a JS
+         +ON schema; the current models reject forced `tool_choice`. The 
+         +schema guarantees shape only (nested groups are unrolled to dep
+         +th 3 because recursive schemas and length limits are unsupporte
+         +d), so Go enforces everything else: ranges, character limits, a
+         +llowed variables.                                              
+      12 +- **TR:** JSON şemalı yapılandırılmış çıktı (`output_config.for
+         +mat`); güncel modeller zorunlu `tool_choice`'u reddediyor. Şema
+         + sadece biçimi garanti eder (özyinelemeli şema ve uzunluk sınır
+         +ı desteklenmediği için iç içe gruplar 3 seviyeye açılır); aralı
+         +klar, karakter limitleri ve izinli değişkenler gibi geri kalan 
+         +her şeyi Go uygular.                                           
+      13  
+      14 -## D3. Character limits count characters, names included / Limi
+         -tler karakter sayar, isimler dahil                             
+      15 -- **EN:** SMS <= 160 and email subject <= 80, counted in runes 
+         -(`utf8.RuneCountInString`), with personalization values include
+         -d. We do not apply the GSM-7/UCS-2 rule (70 characters for Turk
+         -ish letters) because the case states 160 and most customers sen
+         -d abroad. Known limitation, noted in the README.               
+      16 -- **TR:** SMS <= 160, email konusu <= 80; rune olarak sayılır (
+         -`utf8.RuneCountInString`), kişiselleştirme değerleri dahildir. 
+         -GSM-7/UCS-2 kuralı (Türkçe harflerde 70 karakter) uygulanmaz: c
+         -ase 160 diyor ve müşterilerin çoğu yurtdışına gönderiyor. Bilin
+         -en sınırlama, README'de belirtilir.                            
+      14 +## 3. What happens when Claude is unavailable or answers badly?
+         + / Claude yoksa ya da kötü cevap verirse ne olur?              
+      15 +- **EN:** No key: the app runs on a built-in rule-based mock LL
+         +M and the UI shows a "MOCK" badge. Key present but the API fail
+         +s: the user sees the error and can retry, we never fall back to
+         + mock silently (fake copy could be approved as real). Refusal o
+         +r `max_tokens`: treated as failure. Valid JSON with an invalid 
+         +rule: one repair turn with the validation errors, then the erro
+         +rs are shown and manual editing is possible.                   
+      16 +- **TR:** Key yok: uygulama yerleşik kural tabanlı mock LLM ile
+         + çalışır, arayüzde "MOCK" rozeti görünür. Key var ama API hata 
+         +veriyor: kullanıcı hatayı görür ve tekrar dener; sessizce mock'
+         +a düşmeyiz (sahte metin gerçek sanılıp onaylanabilir). Refusal 
+         +ya da `max_tokens`: başarısızlık sayılır. JSON geçerli ama kura
+         +l geçersiz: doğrulama hatalarıyla bir düzeltme turu, sonra hata
+         +lar gösterilir ve elle düzenleme mümkündür.                    
+      17  
+      18 -## D4. Over-limit handling: block at approval / Limit aşımında 
+         -onayı engelle                                                  
+      19 -- **EN:** At approval we render the copy with the longest value
+         - in the audience for each variable and block approval if it exc
+         -eeds a limit, showing how many people are affected. Sending re-
+         -checks per person. Alternatives: skip those people silently (au
+         -dience shrinks without notice), truncate names (broken text).  
+      20 -- **TR:** Onayda her değişken için kitledeki en uzun değerle re
+         -nder edip limiti aşıyorsa onayı engelleriz ve kaç kişinin etkil
+         -endiğini gösteririz. Gönderimde kişi bazlı tekrar kontrol yapıl
+         -ır. Alternatifler: kişileri sessizce atlamak (kitle haber veril
+         -meden küçülür), ismi kısaltmak (bozuk metin).                  
+      18 +## 4. How do we test without an API key? / API key olmadan nası
+         +l test ederiz?                                                 
+      19 +- **EN:** All LLM access goes through one interface. Tests use 
+         +the mock, and the real Anthropic client is tested against a fak
+         +e HTTP server that imitates stream events, refusal, `max_tokens
+         +`, and 429/529. CI needs no key.                               
+      20 +- **TR:** Tüm LLM erişimi tek bir arayüzden geçer. Testler mock
+         +'u kullanır; gerçek Anthropic istemcisi ise stream event'lerini
+         +, refusal'ı, `max_tokens`'ı ve 429/529'u taklit eden sahte bir 
+         +HTTP sunucusuna karşı test edilir. CI için key gerekmez.       
+      21  
+      22 -## D5. Two-step LLM flow / İki adımlı LLM akışı                
+      23 -- **EN:** Call 1 produces the segment rule; the marketer sees t
+         -he audience size and confirms. Call 2 produces and streams the 
+         -content. Each step is validated and tested on its own. Alternat
+         -ive: one call for both (streaming and audience preview become h
+         -arder).                                                        
+      24 -- **TR:** 1. çağrı segment kuralını üretir; pazarlamacı kitle s
+         -ayısını görüp onaylar. 2. çağrı içeriği üretir ve stream eder. 
+         -Her adım ayrı doğrulanır ve test edilir. Alternatif: tek çağrı 
+         -(streaming ve kitle önizlemesi zorlaşır).                      
+      22 +## 5. How do we express "added to cart but did not buy"? / "Sep
+         +ete ekledi ama almadı" nasıl ifade edilir?                     
+      23 +- **EN:** Event-based rules: user fields plus "event happened /
+         + did not happen within N days" (cart_add, purchase, page_view; 
+         +1-365 days), combinable with nested AND/OR. Channel consent is 
+         +always added by the SQL builder, whatever the rule says.       
+      24 +- **TR:** Olay tabanlı kurallar: kullanıcı alanları ve "son N g
+         +ünde olay oldu / olmadı" (cart_add, purchase, page_view; 1-365 
+         +gün), iç içe AND/OR ile birleştirilebilir. Kanal izni, kural ne
+         + derse desin SQL builder tarafından her zaman eklenir.         
+      25  
+      26 -## D6. Live updates over SSE / Canlı güncelleme SSE ile        
+      27 -- **EN:** Server-Sent Events for both the content stream and th
+         -e dashboard. One direction is enough; standard library on the s
+         -erver, `EventSource` in the browser. Alternative: WebSocket (ne
+         -eds more code for no gain here).                               
+      28 -- **TR:** Hem içerik akışı hem dashboard için SSE. Tek yön yete
+         -rli; sunucuda standart kütüphane, tarayıcıda `EventSource`. Alt
+         -ernatif: WebSocket (burada ek kod, ek fayda yok).              
+      26 +## 6. How do we make sure nobody gets the same message twice? /
+         + Aynı kişiye aynı mesaj iki kez gitmesi nasıl engellenir?      
+      27 +- **EN:** `UNIQUE(campaign_id, user_id, channel)` in Postgres p
+         +lus an idempotency key sent to the provider. The guarantee come
+         +s from the database, so it holds when a worker crashes or a tas
+         +k is enqueued twice.                                           
+      28 +- **TR:** Postgres'te `UNIQUE(campaign_id, user_id, channel)` v
+         +e provider'a gönderilen idempotency key. Garanti veritabanından
+         + geldiği için worker çökse ya da görev iki kez kuyruğa girse de
+         + geçerlidir.                                                   
+      29  
+      30 -## D7. No duplicate sends / Çift gönderim yok                  
+      31 -- **EN:** `UNIQUE(campaign_id, user_id, channel)` in Postgres p
+         -lus an idempotency key sent to the provider. The database guara
+         -ntees it even if a worker crashes or a task is enqueued twice. 
+         -Alternative: application-level check only (racy).              
+      32 -- **TR:** Postgres'te `UNIQUE(campaign_id, user_id, channel)` v
+         -e provider'a gönderilen idempotency key. Worker çökse ya da gör
+         -ev iki kez kuyruğa girse de garanti veritabanından gelir. Alter
+         -natif: sadece uygulama kodunda kontrol (yarış durumuna açık).  
+      30 +## 7. How do we handle failures and the 100 msg/s limit? / Hata
+         +lar ve saniyede 100 mesaj limiti nasıl yönetilir?              
+      31 +- **EN:** Asynq queue on Redis. Retry on 429, 5xx, and timeouts
+         + with exponential backoff and jitter, up to 5 attempts, honorin
+         +g `Retry-After`; other 4xx are not retried. After the last atte
+         +mpt the message is `failed` and stays in the Asynq archive, vis
+         +ible on the dashboard. The rate limit is a token bucket per cha
+         +nnel in Redis, so it holds with any number of workers.         
+      32 +- **TR:** Redis üzerinde Asynq kuyruğu. 429, 5xx ve zaman aşımı
+         +nda üstel bekleme + jitter ile en fazla 5 deneme, `Retry-After`
+         +'a uyulur; diğer 4xx tekrar denenmez. Son denemeden sonra mesaj
+         + `failed` olur, Asynq archive'ında kalır ve dashboard'da görünü
+         +r. Rate limit Redis'te kanal başına token bucket'tır; kaç worke
+         +r çalışırsa çalışsın korunur.                                  
+      33  
+      34 -## D8. Retry strategy / Retry stratejisi                       
+      35 -- **EN:** Retry on 429, 5xx, and timeouts with exponential back
+         -off and jitter, up to 5 attempts; honor the provider's `Retry-A
+         -fter`. Other 4xx errors are not retried. After the last attempt
+         - the message is `failed` and stays in the Asynq archive, visibl
+         -e on the dashboard. Alternative: fixed delay and 3 attempts (si
+         -mpler, weaker under load).                                     
+      36 -- **TR:** 429, 5xx ve zaman aşımında üstel bekleme + jitter ile
+         - en fazla 5 deneme; provider'ın `Retry-After` değerine uyulur. 
+         -Diğer 4xx hatalar tekrar denenmez. Son denemeden sonra mesaj `f
+         -ailed` olur, Asynq archive'ında kalır ve dashboard'da görünür. 
+         -Alternatif: sabit bekleme, 3 deneme (daha basit, yük altında da
+         -ha zayıf).                                                     
+      34 +## 8. How do character limits work with personalization? / Kişi
+         +selleştirmeyle karakter limitleri nasıl işler?                 
+      35 +- **EN:** SMS <= 160 and email subject <= 80, counted in charac
+         +ters (runes), personalization values included. At approval the 
+         +copy is rendered with the longest value of each variable in the
+         + audience; if it exceeds a limit, approval is blocked and the n
+         +umber of affected people is shown. Sending re-checks per person
+         +. The GSM-7/UCS-2 rule (70 characters with Turkish letters) is 
+         +not applied: the case states 160 and most customers send abroad
+         +.                                                              
+      36 +- **TR:** SMS <= 160, email konusu <= 80; karakter (rune) olara
+         +k sayılır, kişiselleştirme değerleri dahildir. Onayda metin, he
+         +r değişkenin kitledeki en uzun değeriyle render edilir; limit a
+         +şılırsa onay engellenir ve etkilenen kişi sayısı gösterilir. Gö
+         +nderimde kişi bazlı tekrar kontrol yapılır. GSM-7/UCS-2 kuralı 
+         +(Türkçe harflerde 70 karakter) uygulanmaz: case 160 diyor ve mü
+         +şterilerin çoğu yurtdışına gönderiyor.                         
+      37  
+      38 -## D9. Rate limit: shared token bucket in Redis / Rate limit: R
+         -edis'te ortak token bucket                                     
+      39 -- **EN:** One bucket per channel, 100 messages per second, stor
+         -ed in Redis, so the limit holds no matter how many workers run.
+         - Alternative: per-process limiter (correct only with a single w
+         -orker).                                                        
+      40 -- **TR:** Kanal başına 100 mesaj/sn, Redis'te tutulan tek bir b
+         -ucket; kaç worker çalışırsa çalışsın limit korunur. Alternatif:
+         - süreç başına limiter (sadece tek worker'da doğru).            
+      38 +## 9. Why two LLM calls and SSE? / Neden iki LLM çağrısı ve SSE
+         +?                                                              
+      39 +- **EN:** Call 1 produces the segment rule so the marketer sees
+         + the audience size before any copy is written; call 2 streams t
+         +he content. Both streams and the dashboard use Server-Sent Even
+         +ts: one direction is enough and it needs no extra library.     
+      40 +- **TR:** 1. çağrı segment kuralını üretir, böylece pazarlamacı
+         + metin yazılmadan önce kitle sayısını görür; 2. çağrı içeriği s
+         +tream eder. İçerik akışı ve dashboard SSE kullanır: tek yön yet
+         +erli ve ek kütüphane gerekmez.                                 
+      41  
+      42 -## D10. No authentication / Kimlik doğrulama yok               
+      43 -- **EN:** Out of scope for the case; listed in the README as no
+         -t done.                                                        
+      44 -- **TR:** Case kapsamı dışında; README'de yapılmadı olarak beli
+         -rtilir.                                                        
+      45 -                                                               
+      46 -## D11. Event-based segment rules, SQL built by Go / Olay taban
+         -lı segment kuralı, SQL'i Go üretir                             
+      47 -- **EN:** The LLM returns only a JSON rule. Go validates it and
+         - builds parameterized SQL: field and event names map to fixed S
+         -QL fragments from a whitelist, and all values go through `$n` p
+         -arameters. The LLM never writes SQL. Rules support user fields 
+         -and "event happened / did not happen within N days", which expr
+         -esses the example brief. Alternative: precomputed user columns 
+         -(simpler, cannot express "added to cart but did not buy").     
+      48 -- **TR:** LLM sadece JSON kural döndürür. Go kuralı doğrular ve
+         - parametreli SQL üretir: alan ve olay adları whitelist'teki sab
+         -it SQL parçalarına eşlenir, tüm değerler `$n` parametresiyle gi
+         -der. LLM hiçbir zaman SQL yazmaz. Kural, kullanıcı alanlarını v
+         -e "son N günde olay oldu / olmadı" koşullarını destekler; örnek
+         - brief bununla ifade edilir. Alternatif: önceden hesaplanmış ko
+         -lonlar (daha basit, "sepete ekledi ama almadı"yı ifade edemez).
+      49 -                                                               
+      50 -## D12. Nested AND/OR groups with limits / Sınırlı iç içe AND/O
+         -R grupları                                                     
+      51 -- **EN:** Nested groups up to depth 3 and at most 20 conditions
+         - in total. The limits keep the validator, the builder, and the 
+         -query cost bounded.                                            
+      52 -- **TR:** En fazla 3 seviye iç içe grup ve toplam 20 koşul. Sın
+         -ırlar validator'ı, builder'ı ve sorgu maliyetini kontrol altınd
+         -a tutar.                                                       
+      53 -                                                               
+      54 -## D13. Structured output through `output_config.format` / Yapı
+         -landırılmış çıktı `output_config.format` ile                   
+      55 -- **EN:** The API constrains the response to a JSON schema. For
+         -ced `tool_choice` was the older way, but the current models rej
+         -ect it with a 400. Structured outputs also work with streaming.
+      56 -- **TR:** API cevabı bir JSON şemasına uydurmaya zorlar. Zorunl
+         -u `tool_choice` eski yöntemdi; güncel modeller bunu 400 ile red
+         -dediyor. Yapılandırılmış çıktı streaming ile de çalışır.       
+      57 -                                                               
+      58 -## D14. Schema guarantees shape, Go enforces rules / Şema biçim
+         -i garanti eder, kuralları Go uygular                           
+      59 -- **EN:** Structured outputs do not support recursive schemas, 
+         -numeric limits, or string length limits. So the schema expands 
+         -nested groups to depth 3 with `$defs`, and Go checks everything
+         - else: whitelists, ranges, character limits, allowed variables.
+      60 -- **TR:** Yapılandırılmış çıktı özyinelemeli şema, sayı sınırı 
+         -ve metin uzunluğu sınırını desteklemez. Bu yüzden şema iç içe g
+         -rupları 3 seviyeye kadar `$defs` ile açar; geri kalan her şeyi 
+         -Go kontrol eder: whitelist'ler, aralıklar, karakter limitleri, 
+         -izinli değişkenler.                                            
+      61 -                                                               
+      62 -## D15. Mock LLM is a first-class mode / Mock LLM birinci sınıf
+         - bir mod                                                       
+      63 -- **EN:** The case allows developing against a mock, and a revi
+         -ewer may run the project without a key. The mock is rule-based:
+         - it picks up a city, "last N days", cart/purchase, and a discou
+         -nt from the brief, builds a valid rule and template copy, and s
+         -treams it with small delays. The UI shows a "MOCK" badge. With 
+         -no `ANTHROPIC_API_KEY`, mock mode is automatic.                
+      64 -- **TR:** Case mock ile geliştirmeye izin veriyor ve değerlendi
+         -rici projeyi key olmadan çalıştırabilir. Mock kural tabanlıdır:
+         - brief'ten şehir, "son N gün", sepet/satın alma ve indirimi yak
+         -alar, geçerli kural ve şablon metin üretir, küçük gecikmelerle 
+         -stream eder. Arayüzde "MOCK" rozeti görünür. `ANTHROPIC_API_KEY
+         -` yoksa mock mod otomatik açılır.                              
+      65 -                                                               
+      66 -## D16. Real Anthropic client tested without a key / Gerçek Ant
+         -hropic istemcisi key'siz test edilir                           
+      67 -- **EN:** Tests run the real client against a fake HTTP server 
+         -(`httptest`, SDK base URL override) that imitates stream events
+         -, refusal, `max_tokens`, and 429/529. So the integration code i
+         -s verified in CI without a real key.                           
+      68 -- **TR:** Testler gerçek istemciyi, stream event'lerini, refusa
+         -l'ı, `max_tokens`'ı ve 429/529'u taklit eden sahte bir HTTP sun
+         -ucusuna karşı çalıştırır (`httptest`, SDK base URL override). B
+         -öylece entegrasyon kodu CI'da gerçek key olmadan doğrulanır.   
+      69 -                                                               
+      70 -## D17. No silent fallback to mock / Mock'a sessiz geçiş yok   
+      71 -- **EN:** With a real key, an API failure (429, 529, 5xx, timeo
+         -ut) is shown to the user with a retry option after the SDK's ow
+         -n retries. Falling back to mock would let fake copy be approved
+         - as if the model wrote it.                                     
+      72 -- **TR:** Gerçek key varken API hatası (429, 529, 5xx, zaman aş
+         -ımı), SDK'nın kendi retry'larından sonra kullanıcıya tekrar den
+         -eme seçeneğiyle gösterilir. Mock'a geçmek, sahte metnin modelin
+         - yazdığı sanılarak onaylanmasına yol açardı.                   
+      73 -                                                               
+      74 -## LLM failure handling / LLM hata yönetimi                    
+      75 -| Case / Durum | Behavior / Davranış |                         
+      76 -|---|---|                                                      
+      77 -| Refusal | Content is not read; the user is asked to rewrite t
+         -he brief. / İçerik okunmaz; kullanıcıdan brief'i yeniden yazmas
+         -ı istenir. |                                                   
+      78 -| `max_tokens` | Output counts as incomplete; one retry, then a
+         -n error. / Çıktı eksik sayılır; bir tekrar, sonra hata. |      
+      79 -| Valid JSON, invalid rule | One repair turn with the validatio
+         -n errors; then errors are shown and manual edit is possible. / 
+         -Doğrulama hatalarıyla bir düzeltme turu; sonra hatalar gösteril
+         -ir ve elle düzenleme mümkündür. |                              
+      80 -| Rule matches 0 people | Warning; approval stays disabled. / U
+         -yarı; onay kapalı kalır. |                                     
+      42 +## 10. Which stack? / Hangi teknoloji?                         
+      43 +- **EN:** Go backend (workers, concurrency, and SSE come natura
+         +lly), Postgres for data, Redis + Asynq for the queue (retries, 
+         +scheduled tasks for the scheduling bonus, and an archive as dea
+         +d-letter queue come built in), Vue 3 + Vite + TypeScript for th
+         +e UI.                                                          
+      44 +- **TR:** Go backend (worker, eşzamanlılık ve SSE doğal gelir),
+         + veri için Postgres, kuyruk için Redis + Asynq (retry, zamanlam
+         +a bonusu için zamanlanmış görev ve ölü mesaj kuyruğu olarak arc
+         +hive hazır gelir), arayüz için Vue 3 + Vite + TypeScript.      
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● DECISIONS.md'yi 10 başlık altında, her biri problem-karar-neden formatıyla
+  yeniden düzenledim; kimlik doğrulama maddesini kapsam dışı olduğu için
+  kaldırdım, iç içe grup sınırlarını ve şema/Go doğrulaması ayrımını ilgili
+  kararlarla birleştirdim, mock LLM ve sahte Anthropic sunucusu maddelerini de
+  tek başlık altında topladım. Henüz commit atmadım — README.md'de de benzer bir
+  sadeleştirme gerekip gerekmediğine bakmamı ister misin, ve commit atayım mı? 
+  · summary
+
+● User declined to answer questions
+  ⎿  · Commit ve push nasıl yapılsın? (Dalı main yap, 2 commit, push (Önerilen) 
+     / master'da kal, 2 commit, push / Sadece commit, push'u sonra / Henüz 
+     commit atma)
+
+✻ Baked for 2m 9s · done 7:14 PM
+
+❯ ben elle düzelttim. readme.md şimdilik sildim. son hallerini kontrol et       
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● Dosyalar temiz. Ama git status çıktısında docs/docs/ gibi tuhaf bir yol
+  görünüyor, bunu doğruluyorum.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● docs/docs/ yok, çıktıyı özetleyen araç yolu bozmuş. Gerçek yapı temiz. Son
+  durum şöyle:
+
+  .gitignore
+  CLAUDE.md
+  docs/DECISIONS.md
+  docs/plan.md
+
+  - DECISIONS.md: Elle yaptığın düzeltmeden sonra da içerik tutarlı. 10 karar
+    var, başlıklar problemi gösteriyor, alternatifler ve kimlik doğrulama
+    maddesi yok. Başlıkların altına eklediğin boş satırlar markdown için doğru.
+    Kiril karakter ve yerel yol yok.
+  - CLAUDE.md, plan.md, .gitignore: Aynı taramadan temiz çıktı.
+  - README.md: Sildiğini görüyorum.
+
+  Dikkat etmen gereken iki nokta:
+  1. README yokken bağlantılar: CLAUDE.md README'ye atıf yapmıyor ama
+     DECISIONS.md içinde de yok, sorun çıkmaz. Plan.md'nin "README'de
+     yetişmeyenler listesi" maddesi ise README'yi yazınca geçerli olacak.
+  2. Branch: Hâlâ master dalındayız, hiç commit yok. Repo ana dalı main.
+
+  Commit için hâlâ cevabını bekliyorum: dalı main yapıp iki commit ve push mu,
+  master'da kalıp push mu, sadece yerel commit mi, yoksa önce başka bir şey mi
+  düzeltilecek?
+
+✻ Worked for 20s · done 7:22 PM
+
+❯ main'e çevir, 2 commit at, push et                                            
+
+  Pushed to main, ran 1 shell command (ctrl+o to expand)
+
+● Dal main oldu, iki commit atıldı ve push başarılı. Çalışma ağacı temiz.
+
+  ┌─────────┬─────────────────────────────────┐
+  │ Commit  │             İçerik              │
+  ├─────────┼─────────────────────────────────┤
+  │ 32147d3 │ .gitignore, CLAUDE.md           │
+  ├─────────┼─────────────────────────────────┤
+  │ 20d7567 │ docs/plan.md, docs/DECISIONS.md │
+  └─────────┴─────────────────────────────────┘
+
+  Hook'lar atlanmadı, bir hata çıkmadı. origin/main takibi de ayarlandı.
+
+  Sıradaki adım Aşama 0 (iskelet): Go modülü, docker-compose.yml, /healthz,
+  Makefile ve CI. Başlayayım mı? Bir de make konusu açık: mingw32-make'in
+  kopyasını make.exe adıyla koymamı ister misin, yoksa sadece Docker üzerinden
+  mi çalışalım?
+
+✻ Cooked for 20s · done 7:23 PM
+
+❯ bekle. şimdi session export almam lazım ardından iskelet aşamasına geçeriz.   
+
+● Tamam, bekliyorum. /export komutunu kendin çalıştırman gerekiyor, ben
+  tetikleyemem.
+
+  Birkaç öneri:
+  - Nereye kaydet: Repoda bir ai-sessions/ klasörü henüz yok. Export'u önce repo
+    dışına (örneğin masaüstüne) alıp temizledikten sonra klasöre taşımak daha
+    güvenli. İstersen klasörü ben oluştururum.
+  - Temizlik: Bu session'da yerel kullanıcı yolu (C:\Users\...) ve e-posta
+    adresin geçiyor. Export dosyasında bunlar kalırsa commitlenmemeli. Dosya
+    hazır olunca bana haber ver, ben tarayıp temizlerim.
+  - Dosya adı: Öncekinde olduğu gibi otomatik ad oluşacak. Anlamlı bir ada
+    (01-planning.md gibi) çevirmek işini kolaylaştırır.
+
+  Export alınca haber ver, iskelet aşamasına geçeriz.
+
+✻ Cogitated for 5s · done 7:24 PM
