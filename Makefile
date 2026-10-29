@@ -1,7 +1,7 @@
 # Runs inside Docker so no local Go/Node toolchain is needed.
 .PHONY: test up hooks
 test:
-	docker build --target test --progress=plain backend
+	docker compose run --rm --build test
 
 up:
 	docker compose up --build

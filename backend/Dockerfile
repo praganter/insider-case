@@ -3,9 +3,6 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-# `make test` builds this stage; a failing test fails the build.
-FROM build AS test
-RUN go test ./...
 
 FROM build AS bin
 # CMD selects which binary under cmd/ to build (api, worker, ...).
