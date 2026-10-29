@@ -7,3 +7,6 @@ dist/
 *.log
 .idea/
 .vscode/
+
+# Raw /export files; sanitize into ai-sessions/ first (.claude/skills/ship-session/scripts/session.py)
+/*.txt
