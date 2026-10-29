@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -28,7 +27,7 @@ func main() {
 }
 
 func run(ctx context.Context, pool *pgxpool.Pool, now time.Time) error {
-	if err := migrate(ctx, pool); err != nil {
+	if err := migrations.Apply(ctx, pool); err != nil {
 		return err
 	}
 	var n int
@@ -65,21 +64,4 @@ func run(ctx context.Context, pool *pgxpool.Pool, now time.Time) error {
 	}
 	log.Printf("seed: inserted %d users, %d events", len(users), len(events))
 	return tx.Commit(ctx)
-}
-
-func migrate(ctx context.Context, pool *pgxpool.Pool) error {
-	entries, err := migrations.Files.ReadDir(".")
-	if err != nil {
-		return err
-	}
-	for _, e := range entries {
-		sql, err := migrations.Files.ReadFile(e.Name())
-		if err != nil {
-			return err
-		}
-		if _, err := pool.Exec(ctx, string(sql)); err != nil {
-			return fmt.Errorf("migration %s: %w", e.Name(), err)
-		}
-	}
-	return nil
 }

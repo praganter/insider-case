@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/praganter/insider-case/backend/internal/segment"
 )
@@ -13,8 +14,9 @@ import (
 // Mock is the key-less mode: it reads a few patterns out of the brief and
 // builds a valid rule from them. BadFirst and Err exist for tests.
 type Mock struct {
-	BadFirst bool  // first answer is invalid, the repair answer is valid
-	Err      error // returned instead of an answer
+	BadFirst bool          // first answer is invalid, the repair answer is valid
+	Err      error         // returned instead of an answer
+	Delay    time.Duration // pause between streamed pieces of content
 }
 
 func (Mock) Mode() string { return "mock" }

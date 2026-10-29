@@ -48,29 +48,36 @@ func (a *Anthropic) Audience(ctx context.Context, brief string, previous json.Ra
 			Format: anthropic.JSONOutputFormatParam{Schema: audienceSchema()},
 		},
 	}
-	// One extra attempt when the output is cut off by max_tokens.
 	for attempt := 0; ; attempt++ {
 		resp, err := a.client.Messages.New(ctx, params)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %v", ErrUnavailable, err)
 		}
-		switch resp.StopReason {
-		case anthropic.StopReasonRefusal:
-			log.Printf("llm: refusal, category=%q", resp.StopDetails.Category)
-			return nil, ErrRefused
-		case anthropic.StopReasonMaxTokens:
-			if attempt == 0 {
-				continue
-			}
-			return nil, ErrTruncated
+		if text, retry, err := outcome(resp, attempt); !retry {
+			return text, err
 		}
-		for _, block := range resp.Content {
-			if t, ok := block.AsAny().(anthropic.TextBlock); ok {
-				return json.RawMessage(t.Text), nil
-			}
-		}
-		return nil, fmt.Errorf("%w: response had no text", ErrUnavailable)
 	}
+}
+
+// outcome turns a finished response into text or the matching error. retry is
+// true once when the output was cut off by max_tokens.
+func outcome(resp *anthropic.Message, attempt int) (text json.RawMessage, retry bool, err error) {
+	switch resp.StopReason {
+	case anthropic.StopReasonRefusal:
+		log.Printf("llm: refusal, category=%q", resp.StopDetails.Category)
+		return nil, false, ErrRefused
+	case anthropic.StopReasonMaxTokens:
+		if attempt == 0 {
+			return nil, true, nil
+		}
+		return nil, false, ErrTruncated
+	}
+	for _, block := range resp.Content {
+		if t, ok := block.AsAny().(anthropic.TextBlock); ok {
+			return json.RawMessage(t.Text), false, nil
+		}
+	}
+	return nil, false, fmt.Errorf("%w: response had no text", ErrUnavailable)
 }
 
 func audiencePrompt(now time.Time) string {

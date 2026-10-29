@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/praganter/insider-case/backend/internal/campaign"
 	"github.com/praganter/insider-case/backend/internal/llm"
 	"github.com/praganter/insider-case/backend/internal/segment"
 	"github.com/praganter/insider-case/backend/internal/store"
@@ -16,6 +18,7 @@ import (
 
 func newMux(st *store.Store, ai llm.Client) *http.ServeMux {
 	mux := http.NewServeMux()
+	registerCampaigns(mux, &campaign.Service{Store: st, LLM: ai})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte("ok"))
 	})
@@ -91,7 +94,7 @@ func newLLM() llm.Client {
 	key := os.Getenv("ANTHROPIC_API_KEY")
 	if key == "" {
 		log.Print("ANTHROPIC_API_KEY is empty: running in MOCK LLM mode")
-		return llm.Mock{}
+		return llm.Mock{Delay: 25 * time.Millisecond}
 	}
 	model := os.Getenv("CLAUDE_MODEL")
 	if model == "" {

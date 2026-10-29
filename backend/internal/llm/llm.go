@@ -33,6 +33,9 @@ type Client interface {
 	// Audience returns a rule as JSON. On a repair round, previous is the
 	// rejected rule and problems are the validator's complaints.
 	Audience(ctx context.Context, brief string, previous json.RawMessage, problems []string) (json.RawMessage, error)
+	// Content writes the message copy for the requested channels, streaming the
+	// raw JSON output as it is produced.
+	Content(ctx context.Context, req ContentRequest, s Stream) (json.RawMessage, error)
 	// Mode is "mock" or "anthropic", shown in the UI.
 	Mode() string
 }

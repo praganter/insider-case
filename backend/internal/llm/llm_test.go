@@ -107,3 +107,8 @@ func TestClientErrorPassesThrough(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+func (s *stubClient) Content(context.Context, ContentRequest, Stream) (json.RawMessage, error) {
+	s.calls++
+	return json.RawMessage(s.rule), nil
+}
