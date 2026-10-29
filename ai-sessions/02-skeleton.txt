@@ -251,3 +251,186 @@
   segment validator/builder ve POST /audience/preview. Hangisinden başlayalım?
 
 ✻ Baked for 3s · done 7:48 PM
+
+❯ /export                                                                       
+  ⎿  Conversation exported to: ~\Desktop\insider-case\0-iskelet.txt
+
+❯ 0-iskelet.txt dosyamız hazır. fakat belli ki bu projede ben çok fazla session 
+  export edip sana temizletip commit push ettiricem. bunun daha kısa yolu best  
+  practise olarak ne yapabiliriz ?                                              
+
+● Kısa yol, temizliği ve kontrolü bir kez yazıp repoya koymak. Önerim üç parça:
+
+  1. scripts/sanitize-session.py: Ham export'u alır ve ai-sessions/NN-isim.txt
+     olarak yazar.
+     - Yerel yolları (~ kullanıcı adını, e-postaları ve API key
+       desenlerini (sk-ant-...) yerinde değiştirir.
+     - Kullanıcı adı ve e-posta koda gömülmez, çalışma anında git 
+       config/ortamdan okunur. Böylece script'in kendisi "yerel bilgi yok"
+       kuralını bozmaz.
+     - Değiştirilen her kalıbın sayısını yazdırır, ben de sonucu gözle kontrol
+       edebilirim.
+  2. Pre-commit hook (.githooks/ + make hooks): ai-sessions/ altındaki staged
+     dosyaları aynı desenlerle tarar ve bir şey bulursa commit'i reddeder.
+     Script'i unutsan bile sızıntı çıkmaz. Hook'u atlamayız, kuralımız zaten bu.
+  3. Proje slash komutu (/ship-session 02-skeleton): Export dosyasını sanitize
+     eder, özeti gösterir ve onayını bekler. Onaydan sonra commit atar ve push
+     eder. Sen sadece /export yapıp bu komutu çalıştırırsın.
+
+  0-iskelet.txt şu an repo kökünde ve temizlenmemiş. Sanitize edene kadar git 
+  add -A yapma. İstersen .gitignore'a kök dizindeki /*.txt'yi de ekleriz.
+
+  Bunları kurup 0-iskelet.txt'yi ilk dosya olarak (ai-sessions/02-skeleton.txt)
+  işlememi ister misin?
+
+✻ Worked for 11s · done 7:53 PM
+
+❯ kur bakalım işlemeden önce kurunca bildir.                                    
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Testteki bozuk yol sadece printf'in kaçış karakterlerinden kaynaklanıyor; asıl
+  sorun izin verilen adreslerin (git@github.com) değişmiş sayılması, bu da
+  check'in temiz dosyayı reddetmesine yol açıyor. Bunu düzeltiyorum. · summary
+
+  Ran 1 shell command (ctrl+o to expand)
+● Az önce yazdığım düzenleme anlamsız oldu, onu düzgün bir sürümle
+  değiştiriyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● ~\... yolu hâlâ tam yakalanmıyor (~\... kalıyor).
+  Bakıyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Regex'te [\\/] yerine [\/] kalmış, yani ters eğik çizgiyi eşleştirmiyor.
+  Düzeltiyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Script doğru çalışıyor. Hook'u da gerçek bir commit denemesiyle sınıyorum,
+  kirli dosya reddedilmeli.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Kurulum bitti. 0-iskelet.txt'ye dokunmadım, hâlâ repo kökünde ve işlenmemiş.
+
+  Eklenenler
+  - scripts/session.py:
+    - sanitize RAW OUT temizlenmiş kopyayı yazar ve neyi kaç kez değiştirdiğini
+      sayar.
+    - check FILE... temizlik gerekiyorsa hata verir.
+    - Yerel yolları, sk-ant- gibi key'leri, e-postaları ve kullanıcı adını
+      yakalar. Kullanıcı adı ile git e-postası çalışma anında okunur, koda
+      gömülü değil. noreply@anthropic.com ve git@github.com kalır.
+  - .githooks/pre-commit: ai-sessions/ altında temizlenmemiş dosya varsa
+    commit'i reddeder.
+  - make hooks: hook'u core.hooksPath ile açar. Bu klonda zaten çalıştırdım.
+  - .claude/commands/ship-session.md: /ship-session 02-skeleton komutu. Kökteki
+    en yeni export'u sanitize eder, ham dosyayı siler, sayıları gösterir ve
+    onayını bekler. Onaydan sonra commit atıp push eder.
+  - .gitignore: kökteki /*.txt dosyaları eklendi, ham export yanlışlıkla
+    commit'lenmez.
+
+  Doğrulama
+  - Sentetik veride yol, key ve e-posta temizleniyor, ikinci check geçiyor.
+  - Hook, içinde e-posta olan bir probe dosyasını reddetti. Probe'u geri aldım.
+  - Mevcut 01-planning.txt temiz çıktı.
+  - 0-iskelet.txt üzerinde yalnızca okuma amaçlı check çalıştırdım. 4 kullanıcı
+    adı eşleşmesi buldu, dosyayı değiştirmedi.
+
+  Dikkat
+  - Hook'u atlamıyoruz. Yeni klonda bir kez make hooks çalıştırmak gerekir.
+  - Script Python kullanıyor, ancak CI'da gerekmiyor çünkü hook yalnızca yerelde
+    çalışıyor.
+  - Henüz commit atmadım. Bu kurulumu commit'leyip 0-iskelet.txt'yi
+    /ship-session 02-skeleton ile işleyelim mi?
+
+✻ Brewed for 1m 30s · done 7:58 PM
+
+❯ claude.md .claude içinde değilmiş koydum. commands klasörünü skills yaptım    
+  scripti içine koydum. make hooks çalıştırmama gerek var mı ?                  
+  ⎿  1 skill available
+  ⎿  ⧉ Selected 1 lines from .claude\CLAUDE.md in Visual Studio Code
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● make hooks gerekmedi, çünkü ayar zaten .git/config'de aktif. Ancak script
+  taşınınca hook ve skill'deki yollar kırıldı, bu yüzden yolları düzeltiyorum. 
+  · summary
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Hook yeni yolla çalışıyor ve probe dosyasını yine reddetti.
+
+  - make hooks: Gerekmiyor. Yalnızca yeni bir klonda bir kez çalıştırılır.
+  - Düzeltilen yollar: .githooks/pre-commit, ship-session.md ve script'in kendi
+    hata mesajı artık .claude/skills/scripts/session.py'yi gösteriyor.
+    .gitignore'daki yorum satırı hâlâ eski scripts/session.py yolunu söylüyor,
+    işlevi yok, istersen onu da güncellerim.
+  - CLAUDE.md taşıması: .claude/CLAUDE.md olarak okunuyor, sorun yok. Git bunu
+    kökteki dosyanın silinmesi olarak görüyor (D CLAUDE.md). Bilinçli taşıdıysan
+    commit'te bu çıkacak.
+  - Skill düzeni: Claude Code skill'leri normalde .claude/skills/<isim>/SKILL.md
+    yapısında arar. Skill listemde ship-session görünüyor, yani düz .md şu an
+    tanınıyor. Çalışmazsa önce bu yapıya geçirmeyi dene.
+
+  Hazırsan commit'leyip 0-iskelet.txt'yi /ship-session 02-skeleton ile
+  işleyelim.
+
+✻ Brewed for 22s · done 8:02 PM
+
+❯ isimlendirmeyi tamamladım skills/ship-session artık. şimdi sıra sende commit  
+  push sonra deneyelim                                                          
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+
+● Taşıma sonrası yollar yine eski kaldı. Skill dosyası da SKILL.md adında
+  olmalı. İkisini düzeltip commit'liyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Commit atıldı ve push edildi.
+
+  Commit'ten önce şunları düzelttim:
+  - Yollar: Hook, skill ve script'in hata mesajı artık
+    .claude/skills/ship-session/scripts/session.py'yi gösteriyor.
+  - Skill dosya adı: ship-session.md dosyasını SKILL.md yaptım ve frontmatter'a
+    name: ship-session ekledim.
+  - CLAUDE.md taşıması: Git bunu rename olarak kaydetti (CLAUDE.md -> 
+    .claude/CLAUDE.md).
+
+  Skill'in listede görünmesi için Claude Code'u yeniden başlatman gerekebilir.
+  Sonra /ship-session 02-skeleton ile deneyebilirsin. 0-iskelet.txt hâlâ repo
+  kökünde.
+
+✻ Brewed for 30s · done 8:05 PM
+
+❯ sen şimdilik proje kökündeki 0-iskelet.txt temizle ve pushla                  
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● 0-iskelet.txt temizlendi, ai-sessions/02-skeleton.txt olarak commit'lenip push
+  edildi. Ham dosya silindi, working tree temiz.
+
+  - Sanitize 4 kullanıcı adını değiştirdi, başka bulgu çıkmadı.
+  - Pre-commit hook'u geçti.
+  - Export, /export çalıştırdığın ana kadarki konuşmayı içeriyor. Sonraki
+    mesajlar (bu temizlik dahil) bir sonraki export'a girer.
+
+✻ Cogitated for 21s · done 8:06 PM
+
+❯ aa dur o eski export olarak kaldı bu konuşmalar içinde yok.                   
+
+● Doğru, commit'lenen dosya /export anındaki kesit. Sanitizer ve skill kurulumu
+  gibi sonraki konuşmalar içinde yok.
+
+  Şimdi tekrar /export çalıştır, ham dosya repo köküne düşsün. Sonra söyle,
+  ai-sessions/02-skeleton.txt dosyasını yenisiyle değiştirip commit'leyip push
+  ederim.
+
+  Bunu bundan sonra için de not al: export'u en son adımdan sonra al, sonra
+  temizle ve commit'le. Böylece her seferinde dosyayı baştan yazmak gerekmez.
+
+✻ Cooked for 5s · done 8:07 PM
