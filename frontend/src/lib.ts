@@ -1,3 +1,6 @@
+import { hasKey, translator } from './i18n'
+import type { Lang, Translate } from './i18n'
+
 export type Msg = { channel: 'sms' | 'email'; variant: string; language: string; subject: string; body: string }
 export type Counts = Record<string, number>
 export type VariantCounts = Record<string, Counts>
@@ -49,29 +52,21 @@ type Rule = {
   within_days?: number
   exists?: boolean
 }
-const FIELDS: Record<string, string> = { city: 'City', language: 'Language', gender: 'Gender', age: 'Age', created_at: 'Signed up' }
-const OPS: Record<string, string> = {
-  eq: 'is', neq: 'is not', in: 'is one of', gt: 'is greater than', gte: 'is at least', lt: 'is less than', lte: 'is at most',
-}
-const EVENTS: Record<string, [string, string]> = {
-  cart_add: ['Added to cart', 'Did not add to cart'],
-  purchase: ['Purchased', 'Did not purchase'],
-  page_view: ['Viewed a page', 'Did not view a page'],
-}
-
 // Turns a segment rule into indented plain-language lines for the marketer.
-export function describeRule(n: Rule, depth = 0): { depth: number; text: string }[] {
+export function describeRule(n: Rule, depth = 0, t: Translate = translator('en')): { depth: number; text: string }[] {
   if (n.conditions) {
-    const head = { depth, text: n.match === 'any' ? 'Matches any of:' : 'Matches all of:' }
-    return [head, ...n.conditions.flatMap((c) => describeRule(c, depth + 1))]
+    const head = { depth, text: t(n.match === 'any' ? 'matchAny' : 'matchAll') }
+    return [head, ...n.conditions.flatMap((c) => describeRule(c, depth + 1, t))]
   }
+  // Names the UI has no translation for are shown as they are.
+  const word = (key: string, fallback: string) => (hasKey(key) ? t(key) : fallback)
   if (n.event) {
-    const [yes, no] = EVENTS[n.event] ?? [n.event, 'No ' + n.event]
     const d = n.within_days ?? 0
-    return [{ depth, text: `${n.exists === false ? no : yes} in the last ${d} day${d === 1 ? '' : 's'}` }]
+    const what = word(`ev_${n.event}_${n.exists === false ? 'no' : 'yes'}`, n.event)
+    return [{ depth, text: `${what} ${d === 1 ? t('lastDay') : t('lastDays', { n: d })}` }]
   }
   const v = Array.isArray(n.value) ? n.value.join(', ') : String(n.value)
-  return [{ depth, text: `${FIELDS[n.field ?? ''] ?? n.field} ${OPS[n.op ?? ''] ?? n.op} ${v}` }]
+  return [{ depth, text: `${word('field_' + n.field, n.field ?? '')} ${word('op_' + n.op, n.op ?? '')} ${v}` }]
 }
 
 // Problems that belong to one message start with its label; the rest (for
@@ -88,6 +83,49 @@ export function progress(counts: Counts) {
   const total = Object.values(counts).reduce((a, b) => a + b, 0)
   const done = (counts.sent ?? 0) + (counts.failed ?? 0)
   return { total, done, pct: total ? Math.round((done / total) * 100) : 0 }
+}
+
+export const STATUSES = ['pending', 'retrying', 'sent', 'failed'] as const
+
+// One bar per status, each as a share of all messages in the group, so the
+// lengths can be compared without reading the numbers.
+export function statusBars(counts: Counts) {
+  const total = STATUSES.reduce((a, s) => a + (counts[s] ?? 0), 0)
+  return STATUSES.map((status) => {
+    const n = counts[status] ?? 0
+    return { status, n, pct: total ? Math.round((n / total) * 100) : 0 }
+  })
+}
+
+export type Theme = 'light' | 'dark'
+
+// A stored choice wins; otherwise follow the browser.
+export const initialLang = (stored: string | null, browser: string): Lang =>
+  stored === 'tr' || stored === 'en' ? stored : browser.toLowerCase().startsWith('tr') ? 'tr' : 'en'
+export const initialTheme = (stored: string | null, prefersDark: boolean): Theme =>
+  stored === 'light' || stored === 'dark' ? stored : prefersDark ? 'dark' : 'light'
+
+const CHANNEL_ORDER = ['sms', 'email']
+const LANGUAGE_ORDER = ['tr', 'en']
+const rank = (order: string[], v: string) => (order.includes(v) ? order.indexOf(v) : order.length)
+
+// Groups the message slots as channel -> language -> variants, so the editor
+// can show one block per audience instead of a flat list.
+export function groupMessages(msgs: Msg[]) {
+  const channels = [...new Set(msgs.map((m) => m.channel))].sort((a, b) => rank(CHANNEL_ORDER, a) - rank(CHANNEL_ORDER, b))
+  return channels.map((channel) => {
+    const own = msgs.filter((m) => m.channel === channel)
+    const languages = [...new Set(own.map((m) => m.language))].sort(
+      (a, b) => rank(LANGUAGE_ORDER, a) - rank(LANGUAGE_ORDER, b) || a.localeCompare(b),
+    )
+    return {
+      channel,
+      languages: languages.map((language) => ({
+        language,
+        items: own.filter((m) => m.language === language).sort((a, b) => a.variant.localeCompare(b.variant)),
+      })),
+    }
+  })
 }
 
 // problems are the server's messages; retry means "the LLM was unavailable, try again".
@@ -117,8 +155,8 @@ export const api = {
   create: (brief: string, channels: string[], abTest: boolean) =>
     call<Campaign>('POST', '/campaigns', { brief, channels, ab_test: abTest }),
   get: (id: number) => call<Campaign>('GET', `/campaigns/${id}`),
-  suggest: (brief: string, channel: string) =>
-    call<{ rule: unknown; count: number }>('POST', '/audience/suggest', { brief, channel }),
+  suggest: (brief: string, channels: string[]) =>
+    call<{ rule: unknown; counts: Counts }>('POST', '/audience/suggest', { brief, channels }),
   setAudience: (id: number, rule: unknown) =>
     call<{ counts: Counts }>('PUT', `/campaigns/${id}/audience`, { rule }),
   saveContent: (id: number, messages: Msg[]) =>

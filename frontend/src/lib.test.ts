@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { describeRule, parseSSE, progress, runes, splitProblems } from './lib'
+import { describeRule, groupMessages, initialLang, initialTheme, parseSSE, progress, runes, splitProblems, statusBars } from './lib'
+import { translator } from './i18n'
 import type { Msg } from './lib'
 
 describe('runes', () => {
@@ -67,5 +68,69 @@ describe('splitProblems', () => {
     expect(own(tr)).toEqual([problems[0]])
     expect(own(en)).toEqual([])
     expect(general).toEqual([problems[1]])
+  })
+})
+
+describe('describeRule in Turkish', () => {
+  it('uses the Turkish words and keeps unknown names as they are', () => {
+    const rule = {
+      match: 'any',
+      conditions: [
+        { field: 'gender', op: 'eq', value: 'male' },
+        { event: 'purchase', within_days: 1, exists: false },
+        { event: 'cart_add', within_days: 14, exists: true },
+        { field: 'shoe_size', op: 'eq', value: 42 },
+      ],
+    }
+    expect(describeRule(rule, 0, translator('tr')).map((l) => l.text)).toEqual([
+      'Herhangi biriyle eşleşir:',
+      'Cinsiyet şudur: male',
+      'Satın almadı son 1 günde',
+      'Sepete ekledi son 14 günde',
+      'shoe_size şudur: 42',
+    ])
+  })
+})
+
+describe('groupMessages', () => {
+  const m = (channel: 'sms' | 'email', variant: string, language: string): Msg => ({ channel, variant, language, subject: '', body: '' })
+  it('groups channel, then language, then variant, in a fixed order', () => {
+    const grouped = groupMessages([m('email', 'B', 'en'), m('sms', 'B', 'tr'), m('email', 'A', 'tr'), m('sms', 'A', 'tr'), m('email', 'A', 'en')])
+    expect(grouped.map((g) => g.channel)).toEqual(['sms', 'email'])
+    expect(grouped[1].languages.map((l) => l.language)).toEqual(['tr', 'en'])
+    expect(grouped[0].languages[0].items.map((x) => x.variant)).toEqual(['A', 'B'])
+    expect(grouped[1].languages[1].items.map((x) => x.variant)).toEqual(['A', 'B'])
+  })
+  it('keeps the same message objects, so editing a group edits the message', () => {
+    const one = m('sms', 'A', 'tr')
+    expect(groupMessages([one])[0].languages[0].items[0]).toBe(one)
+  })
+  it('is empty without messages', () => {
+    expect(groupMessages([])).toEqual([])
+  })
+})
+
+describe('statusBars', () => {
+  it('gives every status a share of the group total, in a fixed order', () => {
+    expect(statusBars({ sent: 6, failed: 2, pending: 2 })).toEqual([
+      { status: 'pending', n: 2, pct: 20 },
+      { status: 'retrying', n: 0, pct: 0 },
+      { status: 'sent', n: 6, pct: 60 },
+      { status: 'failed', n: 2, pct: 20 },
+    ])
+  })
+  it('is all zero without messages', () => {
+    expect(statusBars({}).every((b) => b.n === 0 && b.pct === 0)).toBe(true)
+  })
+})
+
+describe('initialLang and initialTheme', () => {
+  it('prefers the stored choice, then the browser', () => {
+    expect(initialLang('en', 'tr-TR')).toBe('en')
+    expect(initialLang(null, 'tr-TR')).toBe('tr')
+    expect(initialLang('fr', 'de-DE')).toBe('en')
+    expect(initialTheme('light', true)).toBe('light')
+    expect(initialTheme(null, true)).toBe('dark')
+    expect(initialTheme('blue', false)).toBe('light')
   })
 })

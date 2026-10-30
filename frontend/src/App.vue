@@ -1,7 +1,23 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { ApiError, LIMITS, api, describeRule, generateContent, label, progress, runes, splitProblems } from './lib'
-import type { Campaign, Counts, Msg, VariantCounts } from './lib'
+import { computed, nextTick, onMounted, onUnmounted, ref, watchEffect } from 'vue'
+import {
+  ApiError, LIMITS, api, describeRule, generateContent, groupMessages, initialLang, initialTheme, label, progress, runes,
+  splitProblems, statusBars,
+} from './lib'
+import type { Campaign, Counts, Msg, Theme, VariantCounts } from './lib'
+import { translator } from './i18n'
+import type { Key, Lang } from './i18n'
+
+const lang = ref<Lang>(initialLang(localStorage.getItem('lang'), navigator.language))
+const theme = ref<Theme>(initialTheme(localStorage.getItem('theme'), matchMedia('(prefers-color-scheme: dark)').matches))
+// Reads lang.value, so anything rendered with it follows a language switch.
+const t = (key: Key, params?: Record<string, string | number>) => translator(lang.value)(key, params)
+watchEffect(() => {
+  document.documentElement.lang = lang.value
+  document.documentElement.dataset.theme = theme.value
+  localStorage.setItem('lang', lang.value)
+  localStorage.setItem('theme', theme.value)
+})
 
 const mode = ref('')
 const brief = ref('')
@@ -9,7 +25,7 @@ const channels = ref<string[]>(['sms'])
 const abTest = ref(false)
 const scheduleAt = ref('')
 const view = ref<Campaign | null>(null)
-const suggestion = ref<{ rule: unknown; count: number } | null>(null)
+const suggestion = ref<{ rule: unknown; counts: Counts } | null>(null)
 const audienceCounts = ref<Counts>({})
 const streamText = ref('')
 const msgs = ref<Msg[]>([])
@@ -18,16 +34,16 @@ const saved = ref(true)
 const dash = ref<{ status: string; counts: Counts; variants?: VariantCounts | null }>({ status: '', counts: {} })
 
 const busy = ref(false)
-const working = ref('')
+const working = ref<Key | ''>('')
 const errors = ref<string[]>([])
 const canRetry = ref(false)
 const errorBox = ref<HTMLElement | null>(null)
-let last: { fn: () => Promise<void>; label: string } | null = null
+let last: { fn: () => Promise<void>; label: Key | '' } | null = null
 
 // Every action goes through here so a failure is shown the same way, with a
 // retry when trying again can help (LLM or network trouble). Actions with a
 // label tell the user what is happening and move focus to the error if one occurs.
-async function run(fn: () => Promise<void>, label = '') {
+async function run(fn: () => Promise<void>, label: Key | '' = '') {
   last = { fn, label }
   busy.value = true
   working.value = label
@@ -40,7 +56,7 @@ async function run(fn: () => Promise<void>, label = '') {
       errors.value = e.problems
       canRetry.value = e.retry
     } else {
-      errors.value = ['Could not reach the server.']
+      errors.value = [t('unreachable')]
       canRetry.value = true
     }
     if (label) nextTick(() => errorBox.value?.focus())
@@ -56,16 +72,29 @@ const isMock = computed(() => mode.value === 'mock')
 const sending = computed(() => status.value === 'sending' || status.value === 'completed')
 const prog = computed(() => progress(dash.value.counts))
 const showVariants = computed(() => Object.keys(dash.value.variants ?? {}).length > 1)
-const languages = computed(() => new Set(msgs.value.map((m) => m.language)).size)
+const grouped = computed(() => groupMessages(msgs.value))
+const manyLanguages = computed(() => new Set(msgs.value.map((m) => m.language)).size > 1)
 const split = computed(() => splitProblems(problems.value, msgs.value))
-const scheduledFor = computed(() => (view.value?.scheduled_at ? new Date(view.value.scheduled_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''))
+const scheduledFor = computed(() =>
+  view.value?.scheduled_at ? new Date(view.value.scheduled_at).toLocaleString(lang.value, { dateStyle: 'medium', timeStyle: 'short' }) : '',
+)
 // datetime-local has no zone; the minimum is "now" in the user's own time.
 const nowLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
 const audienceEmpty = computed(
   () => Object.keys(audienceCounts.value).length > 0 && Object.values(audienceCounts.value).some((n) => n === 0),
 )
+const suggestionCounts = computed(() => Object.values(suggestion.value?.counts ?? {}))
+const nobodyMatches = computed(() => suggestionCounts.value.every((n) => n === 0))
+const someChannelEmpty = computed(() => suggestionCounts.value.some((n) => n === 0))
+// One group per variant when the campaign is an A/B test, otherwise everything together.
+const deliveryGroups = computed(() => {
+  const v = dash.value.variants ?? {}
+  return showVariants.value
+    ? Object.keys(v).sort().map((k) => ({ name: t('variant', { v: k }), counts: v[k] }))
+    : [{ name: t('allMessages'), counts: dash.value.counts }]
+})
 
-const STEPS = ['Brief', 'Audience', 'Message', 'Delivery']
+const STEPS: Key[] = ['stepBrief', 'stepAudience', 'stepMessage', 'stepDelivery']
 const stepIndex = computed(() => {
   if (!view.value) return 0
   if (status.value === 'draft') return 1
@@ -93,20 +122,20 @@ function createAndSuggest() {
     view.value = c
     location.hash = String(c.id)
     await suggest()
-  }, 'Creating the campaign and suggesting an audience…')
+  }, 'workCreate')
 }
 
 async function suggest() {
-  suggestion.value = await api.suggest(brief.value, channels.value[0])
+  suggestion.value = await api.suggest(brief.value, channels.value)
 }
-const suggestAgain = () => run(suggest, 'Suggesting an audience…')
+const suggestAgain = () => run(suggest, 'workSuggest')
 
 function useAudience() {
   return run(async () => {
     const { counts } = await api.setAudience(view.value!.id, suggestion.value!.rule)
     audienceCounts.value = counts
     await load(view.value!.id)
-  }, 'Saving the audience…')
+  }, 'workSave')
 }
 
 function generate() {
@@ -121,7 +150,7 @@ function generate() {
     problems.value = res.problems ?? []
     saved.value = true
     await load(view.value!.id)
-  }, 'Writing the copy…')
+  }, 'workWrite')
 }
 
 // Edits are saved shortly after typing stops; the reply says what still breaks a limit.
@@ -141,7 +170,7 @@ function approveAndSchedule() {
   return run(async () => {
     await api.schedule(view.value!.id, new Date(scheduleAt.value))
     await load(view.value!.id)
-  }, 'Approving and scheduling…')
+  }, 'workSchedule')
 }
 
 function cancelSchedule() {
@@ -151,7 +180,7 @@ function cancelSchedule() {
     dash.value = { status: '', counts: {} }
     await api.unschedule(view.value!.id)
     await load(view.value!.id)
-  }, 'Cancelling the schedule…')
+  }, 'workCancel')
 }
 
 function approveAndSend() {
@@ -159,7 +188,7 @@ function approveAndSend() {
     await api.approve(view.value!.id)
     await api.send(view.value!.id)
     await load(view.value!.id)
-  }, 'Approving and sending…')
+  }, 'workSend')
 }
 
 let es: EventSource | null = null
@@ -196,10 +225,7 @@ function reset() {
 }
 
 const key = (m: Msg) => label(m).replace(/ /g, '-')
-const heading = (m: Msg) =>
-  [m.channel.toUpperCase(), view.value?.ab_test ? 'variant ' + m.variant : '', languages.value > 1 ? m.language : '']
-    .filter(Boolean)
-    .join(' · ')
+const languageName = (code: string) => (code === 'tr' || code === 'en' ? t(`lang_${code}`) : code)
 const limitFor = (m: Msg) => (m.channel === 'sms' ? LIMITS.sms : LIMITS.subject)
 const sizeFor = (m: Msg) => runes(m.channel === 'sms' ? m.body : m.subject)
 const overBy = (m: Msg) => Math.max(0, sizeFor(m) - limitFor(m))
@@ -214,174 +240,197 @@ onUnmounted(() => es?.close())
 </script>
 
 <template>
-  <main>
-    <header>
-      <h1>Smart Campaign Composer</h1>
-      <span v-if="mode" class="badge" :class="{ mock: isMock }" :title="isMock ? 'No API key: rule-based mock LLM' : 'Live model'">
+  <div class="topbar">
+    <small class="credit">{{ t('developedBy') }}</small>
+    <div class="title">
+      <h1>{{ t('appTitle') }}</h1>
+      <span v-if="mode" class="badge" :class="{ mock: isMock }" :title="isMock ? t('mockTitle') : t('liveTitle')">
         {{ isMock ? 'MOCK' : 'LIVE' }}
       </span>
-      <button v-if="view" class="link" @click="reset">New campaign</button>
-    </header>
+    </div>
+    <div class="tools">
+      <button class="switch" role="switch" :aria-checked="lang === 'en'" :aria-label="t('language')" @click="lang = lang === 'tr' ? 'en' : 'tr'">
+        <span class="thumb" aria-hidden="true"></span>
+        <span class="opt" :class="{ on: lang === 'tr' }">TR</span>
+        <span class="opt" :class="{ on: lang === 'en' }">EN</span>
+      </button>
+      <button class="switch" role="switch" :aria-checked="theme === 'dark'" :aria-label="t('theme')" :title="t(theme === 'dark' ? 'light' : 'dark')"
+        @click="theme = theme === 'dark' ? 'light' : 'dark'">
+        <span class="thumb" aria-hidden="true"></span>
+        <span class="opt" :class="{ on: theme === 'light' }">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+          </svg>
+        </span>
+        <span class="opt" :class="{ on: theme === 'dark' }">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+          </svg>
+        </span>
+      </button>
+    </div>
+  </div>
 
-    <ol class="steps" aria-label="Progress">
-      <li v-for="(s, i) in STEPS" :key="s" :class="{ done: i < stepIndex, current: i === stepIndex }"
-        :aria-current="i === stepIndex ? 'step' : undefined">
-        <span class="dot" aria-hidden="true">{{ i < stepIndex ? '✓' : i + 1 }}</span>{{ s }}
-      </li>
-    </ol>
+  <main>
+    <div class="progress-row">
+      <ol class="steps" :aria-label="t('progress')">
+        <template v-for="(s, i) in STEPS" :key="s">
+          <li v-if="i > 0" class="sep" :class="{ done: i <= stepIndex }" aria-hidden="true"></li>
+          <li class="step" :class="{ done: i < stepIndex, current: i === stepIndex }" :aria-current="i === stepIndex ? 'step' : undefined">
+            <span class="dot" aria-hidden="true">{{ i < stepIndex ? '✓' : i + 1 }}</span>{{ t(s) }}
+          </li>
+        </template>
+      </ol>
+      <button v-if="view" class="link" @click="reset">{{ t('newCampaign') }}</button>
+    </div>
 
-    <p v-if="busy && working" class="working" role="status">{{ working }}</p>
+    <p v-if="busy && working" class="working" role="status">{{ t(working) }}</p>
 
     <div v-if="errors.length" ref="errorBox" class="error" role="alert" tabindex="-1">
       <p v-for="e in errors" :key="e">{{ e }}</p>
-      <button v-if="canRetry && last" :disabled="busy" @click="retry">Try again</button>
+      <button v-if="canRetry && last" :disabled="busy" @click="retry">{{ t('tryAgain') }}</button>
     </div>
 
     <section>
-      <h2>Brief</h2>
-      <label for="brief">What should this campaign do, and for whom?</label>
-      <textarea id="brief" v-model="brief" rows="3" :disabled="!!view || busy"
-        placeholder="e.g. Send a 10% discount SMS to Istanbul users who added to cart in the last 14 days but did not buy"></textarea>
+      <h2>{{ t('brief') }}</h2>
+      <label for="brief">{{ t('briefQuestion') }}</label>
+      <textarea id="brief" v-model="brief" rows="3" :disabled="!!view || busy" :placeholder="t('briefPlaceholder')"></textarea>
       <div class="row">
         <fieldset>
-          <legend>Channels</legend>
-          <label v-for="ch in ['sms', 'email']" :key="ch" class="check">
-            <input type="checkbox" :value="ch" v-model="channels" :disabled="!!view || busy" /> {{ ch }}
+          <legend>{{ t('channels') }}</legend>
+          <label v-for="ch in (['sms', 'email'] as const)" :key="ch" class="check">
+            <input type="checkbox" :value="ch" v-model="channels" :disabled="!!view || busy" /> {{ t(ch) }}
           </label>
         </fieldset>
         <label class="check">
-          <input type="checkbox" v-model="abTest" :disabled="!!view || busy" /> A/B test (two versions of the copy)
+          <input type="checkbox" v-model="abTest" :disabled="!!view || busy" /> {{ t('abTest') }}
         </label>
         <button v-if="!view" :disabled="busy || !brief.trim() || !channels.length" @click="createAndSuggest">
-          Suggest audience
+          {{ t('suggestAudience') }}
         </button>
       </div>
     </section>
 
     <section v-if="view">
-      <h2>Audience</h2>
+      <h2>{{ t('audience') }}</h2>
       <template v-if="status === 'draft'">
         <template v-if="suggestion">
-          <p>
-            <strong>{{ suggestion.count }}</strong> users match for {{ channels[0] }}. Only users who agreed to
-            {{ channels[0] }} are counted.
-          </p>
+          <div class="counts">
+            <div v-for="(n, ch) in suggestion.counts" :key="ch" class="count">
+              <span class="count-n">{{ n }}</span>
+              <span>{{ t(ch as 'sms' | 'email') }}</span>
+            </div>
+          </div>
+          <p class="hint">{{ t('audienceIntro') }}</p>
           <ul class="rule">
-            <li v-for="(l, i) in describeRule(suggestion.rule as any)" :key="i" :style="{ paddingLeft: l.depth * 20 + 'px' }">
+            <li v-for="(l, i) in describeRule(suggestion.rule as any, 0, t)" :key="i" :style="{ paddingLeft: l.depth * 20 + 'px' }">
               {{ l.text }}
             </li>
           </ul>
           <details>
-            <summary>Show the raw rule</summary>
+            <summary>{{ t('showRaw') }}</summary>
             <pre>{{ JSON.stringify(suggestion.rule, null, 2) }}</pre>
           </details>
           <div class="row">
-            <button :disabled="busy || suggestion.count === 0" @click="useAudience">Use this audience</button>
-            <button class="secondary" :disabled="busy" @click="suggestAgain">Suggest again</button>
+            <button :disabled="busy || nobodyMatches" @click="useAudience">{{ t('useAudience') }}</button>
+            <button class="secondary" :disabled="busy" @click="suggestAgain">{{ t('suggestAgain') }}</button>
           </div>
-          <p v-if="suggestion.count === 0" class="warn">Nobody matches. Start a new campaign with a different brief.</p>
+          <p v-if="nobodyMatches" class="warn">{{ t('nobody') }}</p>
+          <p v-else-if="someChannelEmpty" class="warn">{{ t('channelEmpty') }}</p>
         </template>
-        <button v-else :disabled="busy" @click="suggestAgain">Suggest audience</button>
+        <button v-else :disabled="busy" @click="suggestAgain">{{ t('suggestAudience') }}</button>
       </template>
       <template v-else>
         <ul class="rule">
-          <li v-for="(l, i) in describeRule(view.segment_rule as any)" :key="i" :style="{ paddingLeft: l.depth * 20 + 'px' }">
+          <li v-for="(l, i) in describeRule(view.segment_rule as any, 0, t)" :key="i" :style="{ paddingLeft: l.depth * 20 + 'px' }">
             {{ l.text }}
           </li>
         </ul>
         <p v-if="Object.keys(audienceCounts).length">
-          <span v-for="(n, ch) in audienceCounts" :key="ch" class="chip">{{ ch }}: {{ n }} recipients</span>
+          <span v-for="(n, ch) in audienceCounts" :key="ch" class="chip">{{ t(ch as 'sms' | 'email') }}: {{ t('recipients', { n }) }}</span>
         </p>
-        <p v-if="audienceEmpty" class="warn">A channel has no recipients, so this campaign cannot be approved.</p>
+        <p v-if="audienceEmpty" class="warn">{{ t('channelEmpty') }}</p>
       </template>
     </section>
 
     <section v-if="status === 'audience_ready' || status === 'content_ready' || streamText">
-      <h2>Message</h2>
-      <button v-if="status === 'audience_ready'" :disabled="busy" @click="generate">Write the copy</button>
-      <pre v-if="busy && streamText" class="stream" aria-label="Copy being written">{{ streamText }}</pre>
+      <h2>{{ t('message') }}</h2>
+      <button v-if="status === 'audience_ready'" :disabled="busy" @click="generate">{{ t('writeCopy') }}</button>
+      <pre v-if="busy && streamText" class="stream" :aria-label="t('writing')">{{ streamText }}</pre>
 
       <template v-if="status === 'content_ready'">
         <p class="hint">
-          <code>&#123;&#123;first_name&#125;&#125;</code>, <code>&#123;&#123;last_name&#125;&#125;</code> and
-          <code>&#123;&#123;city&#125;&#125;</code> are
-          filled in per person. Counters show the text as written; the check under each message uses the longest names
-          and cities in your audience, so nobody is cut off. Changes are saved as you type.
+          <code>&#123;&#123;first_name&#125;&#125;</code>, <code>&#123;&#123;last_name&#125;&#125;</code>
+          &amp; <code>&#123;&#123;city&#125;&#125;</code> {{ t('hint') }}
         </p>
         <p v-for="p in split.general" :key="p" class="warn">{{ p }}</p>
-        <div v-for="m in msgs" :key="key(m)" class="msg">
-          <h3>{{ heading(m) }}</h3>
-          <template v-if="m.channel === 'email'">
-            <label :for="'subject-' + key(m)">Subject</label>
-            <input :id="'subject-' + key(m)" v-model="m.subject" @input="edited"
-              :aria-invalid="split.own(m).length > 0" :aria-describedby="describedBy(m)" />
-          </template>
-          <label :for="'body-' + key(m)">{{ m.channel === 'email' ? 'Email body' : 'SMS text' }}</label>
-          <textarea :id="'body-' + key(m)" v-model="m.body" rows="4" @input="edited"
-            :aria-invalid="split.own(m).length > 0" :aria-describedby="describedBy(m)"></textarea>
-          <small :id="'count-' + key(m)" :class="{ over: overBy(m) > 0 }">
-            {{ m.channel === 'sms' ? 'Characters' : 'Subject characters' }}: {{ sizeFor(m) }} / {{ limitFor(m) }}
-            <template v-if="overBy(m) > 0"> ({{ overBy(m) }} over)</template>
-          </small>
-          <div :id="'problems-' + key(m)">
-            <p v-for="p in split.own(m)" :key="p" class="warn">{{ p }}</p>
+        <div v-for="g in grouped" :key="g.channel" class="channel-group">
+          <h3 class="channel-title">{{ t(g.channel as 'sms' | 'email') }}</h3>
+          <div v-for="l in g.languages" :key="l.language" class="lang-group">
+            <h4 v-if="manyLanguages">{{ languageName(l.language) }}</h4>
+            <div class="variants-grid">
+              <div v-for="m in l.items" :key="key(m)" class="msg">
+                <h5 v-if="view?.ab_test">{{ t('variant', { v: m.variant }) }}</h5>
+                <template v-if="m.channel === 'email'">
+                  <label :for="'subject-' + key(m)">{{ t('subject') }}</label>
+                  <input :id="'subject-' + key(m)" v-model="m.subject" @input="edited"
+                    :aria-invalid="split.own(m).length > 0" :aria-describedby="describedBy(m)" />
+                </template>
+                <label :for="'body-' + key(m)">{{ m.channel === 'email' ? t('emailBody') : t('smsText') }}</label>
+                <textarea :id="'body-' + key(m)" v-model="m.body" rows="4" @input="edited"
+                  :aria-invalid="split.own(m).length > 0" :aria-describedby="describedBy(m)"></textarea>
+                <small :id="'count-' + key(m)" :class="{ over: overBy(m) > 0 }">
+                  {{ m.channel === 'sms' ? t('chars') : t('subjectChars') }}: {{ sizeFor(m) }} / {{ limitFor(m) }}
+                  <template v-if="overBy(m) > 0"> ({{ t('over', { n: overBy(m) }) }})</template>
+                </small>
+                <div :id="'problems-' + key(m)">
+                  <p v-for="p in split.own(m)" :key="p" class="warn">{{ p }}</p>
+                </div>
+                <p v-if="saved && !split.own(m).length" class="ok">{{ t('fits') }}</p>
+              </div>
+            </div>
           </div>
-          <p v-if="saved && !split.own(m).length" class="ok">Fits for everyone who gets this version.</p>
         </div>
         <div class="row">
-          <button class="secondary" :disabled="busy" @click="generate">Write again</button>
-          <button :disabled="busy || !saved || problems.length > 0" @click="approveAndSend">Approve and send</button>
+          <button class="secondary" :disabled="busy" @click="generate">{{ t('writeAgain') }}</button>
+          <button :disabled="busy || !saved || problems.length > 0" @click="approveAndSend">{{ t('approveSend') }}</button>
         </div>
         <div class="row schedule">
           <div>
-            <label for="schedule-at">Or send later</label>
+            <label for="schedule-at">{{ t('sendLater') }}</label>
             <input id="schedule-at" type="datetime-local" v-model="scheduleAt" :min="nowLocal()" />
           </div>
           <button class="secondary" :disabled="busy || !saved || problems.length > 0 || !scheduleAt" @click="approveAndSchedule">
-            Approve and schedule
+            {{ t('approveSchedule') }}
           </button>
         </div>
-        <p class="hint">Nothing is sent until you approve.</p>
+        <p class="hint">{{ t('nothingSent') }}</p>
       </template>
     </section>
 
     <section v-if="sending || status === 'scheduled'">
-      <h2>Delivery</h2>
+      <h2>{{ t('delivery') }}</h2>
       <div v-if="status === 'scheduled'" class="row">
-        <p role="status">Approved. Will be sent on <strong>{{ scheduledFor }}</strong>.</p>
-        <button class="secondary" :disabled="busy" @click="cancelSchedule">Cancel schedule</button>
+        <p role="status">{{ t('willSendOn', { when: scheduledFor }) }}</p>
+        <button class="secondary" :disabled="busy" @click="cancelSchedule">{{ t('cancelSchedule') }}</button>
       </div>
       <template v-else>
-      <p>
-        Status: <strong>{{ dash.status || status }}</strong> · {{ prog.done }} of {{ prog.total }} finished
-      </p>
-      <div class="bar" role="progressbar" aria-label="Delivery progress" :aria-valuenow="prog.pct" aria-valuemin="0" aria-valuemax="100">
-        <div :style="{ width: prog.pct + '%' }"></div>
-      </div>
-      <p>
-        <span v-for="s in ['pending', 'retrying', 'sent', 'failed']" :key="s" class="chip" :class="s">
-          {{ s }}: {{ dash.counts[s] ?? 0 }}
-        </span>
-      </p>
-      <p v-if="dash.counts.retrying" class="hint">
-        Retrying messages hit a temporary provider error and are tried again automatically.
-      </p>
-      <table v-if="showVariants" class="variants">
-        <caption>A/B results</caption>
-        <thead>
-          <tr>
-            <th scope="col">Variant</th>
-            <th v-for="s in ['pending', 'retrying', 'sent', 'failed']" :key="s" scope="col">{{ s }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(c, v) in dash.variants" :key="v">
-            <th scope="row">{{ v }}</th>
-            <td v-for="s in ['pending', 'retrying', 'sent', 'failed']" :key="s">{{ c[s] ?? 0 }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <p v-if="(dash.status || status) === 'completed'" class="ok" role="status">Delivery finished.</p>
+        <p>{{ t('statusLine', { status: dash.status || status, done: prog.done, total: prog.total }) }}</p>
+        <div class="bar" role="progressbar" :aria-label="t('delivery')" :aria-valuenow="prog.pct" aria-valuemin="0" aria-valuemax="100">
+          <div :style="{ width: prog.pct + '%' }"></div>
+        </div>
+        <div class="delivery-groups">
+          <div v-for="g in deliveryGroups" :key="g.name" class="delivery-group">
+            <h3>{{ g.name }}</h3>
+            <div v-for="b in statusBars(g.counts)" :key="b.status" class="status-row">
+              <span class="status-name">{{ t(b.status) }}</span>
+              <div class="track"><div class="fill" :class="b.status" :style="{ width: b.pct + '%' }"></div></div>
+              <span class="status-n">{{ b.n }} <small>({{ b.pct }}%)</small></span>
+            </div>
+          </div>
+        </div>
+        <p v-if="dash.counts.retrying" class="hint">{{ t('retryingHint') }}</p>
+        <p v-if="(dash.status || status) === 'completed'" class="ok" role="status">{{ t('deliveryFinished') }}</p>
       </template>
     </section>
   </main>
@@ -400,21 +449,20 @@ onUnmounted(() => es?.close())
   --bad: #dc2626;
   --good: #15803d;
   --warn: #c2410c;
-  color-scheme: light dark;
+  color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f172a;
-    --card: #1e293b;
-    --text: #f1f5f9;
-    --muted: #a8b3c4;
-    --line: #334155;
-    --field: #64748b;
-    --link: #60a5fa;
-    --bad: #f87171;
-    --good: #4ade80;
-    --warn: #fb923c;
-  }
+:root[data-theme='dark'] {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #f1f5f9;
+  --muted: #a8b3c4;
+  --line: #334155;
+  --field: #64748b;
+  --link: #60a5fa;
+  --bad: #f87171;
+  --good: #4ade80;
+  --warn: #fb923c;
+  color-scheme: dark;
 }
 * {
   box-sizing: border-box;
@@ -426,20 +474,79 @@ body {
   font: 16px/1.5 'Plus Jakarta Sans Variable', system-ui, sans-serif;
 }
 main {
-  max-width: 760px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: 24px 16px 64px;
+  padding: 24px 24px 64px;
 }
-header {
+.topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 24px;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+}
+.credit {
+  font-size: 12px;
+}
+.title {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  gap: 10px;
+}
+.tools {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
   gap: 12px;
 }
 h1 {
-  font-size: 22px;
+  font-size: 20px;
   margin: 0;
-  flex: 1;
+  text-align: center;
+}
+/* A two-option switch: the thumb slides under the active option. */
+.switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 76px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+}
+.switch .thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  border-radius: 999px;
+  background: var(--primary);
+  transition: transform 0.2s;
+}
+.switch[aria-checked='true'] .thumb {
+  transform: translateX(100%);
+}
+.switch .opt {
+  position: relative;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+.switch .opt.on {
+  color: #fff;
+}
+.progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 h2 {
   font-size: 18px;
@@ -598,20 +705,36 @@ button:disabled {
 }
 .steps {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
+  align-items: center;
+  flex: 1;
   list-style: none;
-  margin: 20px 0 0;
-  padding: 0;
+  margin: 0;
+  padding: 14px 24px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
   font-size: 14px;
   color: var(--muted);
 }
-.steps li {
+.step {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
+}
+/* Only the dashed lines stretch, so the gaps between the steps are all equal. */
+.sep {
+  flex: 1;
+  min-width: 24px;
+  margin: 0 12px;
+  border-top: 2px dashed var(--field);
+}
+.sep.done {
+  border-color: var(--good);
 }
 .dot {
+  flex: none;
   display: inline-grid;
   place-items: center;
   width: 24px;
@@ -621,16 +744,16 @@ button:disabled {
   font-size: 12px;
   font-weight: 700;
 }
-.steps .current {
+.step.current {
   color: var(--text);
   font-weight: 700;
 }
-.steps .current .dot {
+.step.current .dot {
   background: var(--primary);
   border-color: var(--primary);
   color: #fff;
 }
-.steps .done .dot {
+.step.done .dot {
   border-color: var(--good);
   color: var(--good);
 }
@@ -654,10 +777,101 @@ button:disabled {
   border-color: var(--bad);
 }
 .msg {
-  margin-bottom: 16px;
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: 10px;
+}
+.channel-group {
+  margin-top: 20px;
+}
+.channel-title {
+  font-size: 15px;
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--primary);
+}
+.lang-group {
+  margin-bottom: 14px;
+}
+h4 {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+h5 {
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+.variants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.count {
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.count-n {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.delivery-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.delivery-group {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.status-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 90px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.track {
+  height: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  background: var(--field);
+  transition: width 0.3s;
+}
+.fill.retrying {
+  background: var(--warn);
+}
+.fill.sent {
+  background: var(--good);
+}
+.fill.failed {
+  background: var(--bad);
+}
+.status-n {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.status-n small {
+  display: inline;
 }
 .row.schedule {
   align-items: flex-end;
@@ -698,30 +912,6 @@ section > .warn,
   border-radius: 999px;
   font-size: 14px;
 }
-.chip.sent {
-  border-color: var(--good);
-}
-.chip.failed {
-  border-color: var(--bad);
-}
-.chip.retrying {
-  border-color: var(--warn);
-}
-.variants {
-  border-collapse: collapse;
-  margin: 8px 0;
-  font-size: 14px;
-}
-.variants caption {
-  text-align: left;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-.variants th,
-.variants td {
-  padding: 4px 14px 4px 0;
-  text-align: left;
-}
 .bar {
   height: 12px;
   background: var(--bg);
@@ -736,6 +926,8 @@ section > .warn,
 }
 @media (prefers-reduced-motion: reduce) {
   .bar div,
+  .fill,
+  .switch .thumb,
   button {
     transition: none;
   }
