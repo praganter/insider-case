@@ -83,3 +83,12 @@ func TestSuggestErrors(t *testing.T) {
 		})
 	}
 }
+
+// The UI shows its MOCK badge from this, so the mode must come from the client.
+func TestMode(t *testing.T) {
+	rec := httptest.NewRecorder()
+	newMux(nil, llm.Mock{}, nil).ServeHTTP(rec, httptest.NewRequest("GET", "/mode", nil))
+	if !strings.Contains(rec.Body.String(), `"mode":"mock"`) {
+		t.Errorf("body %s", rec.Body)
+	}
+}

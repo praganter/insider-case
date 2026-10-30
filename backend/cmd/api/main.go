@@ -24,6 +24,9 @@ func newMux(st *store.Store, ai llm.Client, enqueue func(context.Context, int64)
 	mux := http.NewServeMux()
 	registerCampaigns(mux, &campaign.Service{Store: st, LLM: ai, Enqueue: enqueue})
 	registerMonitor(mux, st)
+	mux.HandleFunc("GET /mode", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{"mode": ai.Mode()})
+	})
 	mux.HandleFunc("POST /audience/preview", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Rule    segment.Node `json:"rule"`
