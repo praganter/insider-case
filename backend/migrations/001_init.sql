@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     phone        text NOT NULL,
     city         text NOT NULL,
     language     text NOT NULL,
-    gender       text NOT NULL,
+    gender       text NOT NULL CHECK (gender IN ('male', 'female')),
     birth_year   int  NOT NULL,
     consent_sms   boolean NOT NULL,
     consent_email boolean NOT NULL,

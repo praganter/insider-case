@@ -83,6 +83,8 @@ func TestBuildInvalid(t *testing.T) {
 		{"op not allowed for field", `{"match":"all","conditions":[{"field":"city","op":"gt","value":"x"}]}`, "sms", `op "gt" not allowed`},
 		{"wrong value type", `{"match":"all","conditions":[{"field":"age","op":"gt","value":"old"}]}`, "sms", "whole number"},
 		{"fractional age", `{"match":"all","conditions":[{"field":"age","op":"gt","value":30.5}]}`, "sms", "whole number"},
+		{"gender outside the set", `{"match":"all","conditions":[{"field":"gender","op":"eq","value":"erkek"}]}`, "sms", `value "erkek" is not one of male, female`},
+		{"gender list outside the set", `{"match":"all","conditions":[{"field":"gender","op":"in","value":["male","other"]}]}`, "sms", `value "other" is not one of`},
 		{"in needs list", `{"match":"all","conditions":[{"field":"city","op":"in","value":"Ankara"}]}`, "sms", "list of 1.."},
 		{"bad date", `{"match":"all","conditions":[{"field":"created_at","op":"gt","value":"yesterday"}]}`, "sms", "date like"},
 		{"unknown event", `{"match":"all","conditions":[{"event":"login","within_days":7,"exists":true}]}`, "sms", `unknown event "login"`},

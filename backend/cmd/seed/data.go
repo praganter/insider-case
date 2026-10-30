@@ -35,7 +35,7 @@ var cities = []weighted{
 	{"Adana", 6}, {"Konya", 5}, {"Gaziantep", 5}, {"Eskişehir", 5}, {"Trabzon", 6},
 }
 var languages = []weighted{{"tr", 85}, {"en", 15}}
-var genders = []weighted{{"female", 48}, {"male", 48}, {"other", 4}}
+var genders = []weighted{{"female", 48}, {"male", 48}}
 var eventTypes = []weighted{{"page_view", 60}, {"cart_add", 25}, {"purchase", 15}}
 
 var firstNames = []string{"Ayşe", "Mehmet", "Zeynep", "Ahmet", "Elif", "Mustafa", "Defne", "Emre", "Selin", "Can", "Deniz", "Burak"}
