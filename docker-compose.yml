@@ -2,17 +2,20 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: app
+      POSTGRES_USER: ${POSTGRES_USER:-app}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
-      POSTGRES_DB: app
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    # Bound to localhost only: the default password is a dev value.
+    ports: ["127.0.0.1:${POSTGRES_PORT:-5433}:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 3s
       retries: 10
 
   redis:
     image: redis:7-alpine
+    ports: ["127.0.0.1:${REDIS_PORT:-6380}:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 3s
@@ -25,7 +28,7 @@ services:
     build: { context: backend, target: build }
     command: ["sh", "scripts/test.sh"]
     environment:
-      TEST_DATABASE_URL: postgres://app:${POSTGRES_PASSWORD:-app}@postgres:5432/postgres?sslmode=disable
+      TEST_DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres:5432/postgres?sslmode=disable
       REDIS_ADDR: redis:6379
     depends_on:
       postgres: { condition: service_healthy }
@@ -39,7 +42,7 @@ services:
   seed:
     build: { context: backend, args: { CMD: seed } }
     environment:
-      DATABASE_URL: postgres://app:${POSTGRES_PASSWORD:-app}@postgres:5432/app?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable
     depends_on:
       postgres: { condition: service_healthy }
 
@@ -50,7 +53,7 @@ services:
         required: false
     environment:
       API_PORT: 8080
-      DATABASE_URL: postgres://app:${POSTGRES_PASSWORD:-app}@postgres:5432/app?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable
       REDIS_ADDR: redis:6379
     ports: ["8080:8080"]
     depends_on:
@@ -68,7 +71,7 @@ services:
   worker:
     build: { context: backend, args: { CMD: worker } }
     environment:
-      DATABASE_URL: postgres://app:${POSTGRES_PASSWORD:-app}@postgres:5432/app?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable
       REDIS_ADDR: redis:6379
       PROVIDER_URL: http://mockprovider:9090
       RATE_PER_SEC: 100
