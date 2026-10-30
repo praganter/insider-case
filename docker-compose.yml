@@ -31,6 +31,11 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
 
+  test-frontend:
+    profiles: [test]
+    build: { context: frontend, target: build }
+    command: ["npm", "test"]
+
   seed:
     build: { context: backend, args: { CMD: seed } }
     environment:
@@ -71,6 +76,12 @@ services:
       seed: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
       mockprovider: { condition: service_started }
+
+  frontend:
+    build: frontend
+    ports: ["3000:80"]
+    depends_on:
+      - api
 
 volumes:
   pgdata:

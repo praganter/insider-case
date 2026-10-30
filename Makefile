@@ -2,6 +2,7 @@
 .PHONY: test up hooks
 test:
 	docker compose run --rm --build test
+	docker compose run --rm --build test-frontend
 
 up:
 	docker compose up --build
