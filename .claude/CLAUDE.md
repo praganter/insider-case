@@ -54,7 +54,7 @@ ai-sessions/       sanitized Claude session exports
 ## Git
 - Small, focused commits with short messages (imperative, one line, optional short body).
 - Never skip git hooks (`--no-verify`, `-c core.hooksPath=...`, etc.). If a hook fails, fix the cause.
-- Commit only when asked.
+- **Never run `git commit` or `git push` unless the user asks for it in that same message.** A commit or push approved earlier does not cover later changes; finish the work, say what changed, and ask. Never use `--force`.
 
 ## Security and privacy
 - `.env` is in `.gitignore`. **Never read, write, edit, print, or commit `.env`.** Only `.env.example` (placeholders, no real values) is touched.
