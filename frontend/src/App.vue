@@ -5,7 +5,7 @@ import {
   splitProblems, statusBars,
 } from './lib'
 import type { Campaign, Counts, Msg, Theme, VariantCounts } from './lib'
-import { translator } from './i18n'
+import { hasKey, translator } from './i18n'
 import type { Key, Lang } from './i18n'
 
 const lang = ref<Lang>(initialLang(localStorage.getItem('lang'), navigator.language))
@@ -83,6 +83,9 @@ const nowLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60
 const audienceEmpty = computed(
   () => Object.keys(audienceCounts.value).length > 0 && Object.values(audienceCounts.value).some((n) => n === 0),
 )
+// The API returns counts as a JSON object, whose order is not stable; show SMS first.
+const CHANNELS = ['sms', 'email'] as const
+const inOrder = (counts: Counts) => CHANNELS.filter((ch) => ch in counts).map((ch) => [ch, counts[ch]] as const)
 const suggestionCounts = computed(() => Object.values(suggestion.value?.counts ?? {}))
 const nobodyMatches = computed(() => suggestionCounts.value.every((n) => n === 0))
 const someChannelEmpty = computed(() => suggestionCounts.value.some((n) => n === 0))
@@ -149,6 +152,7 @@ function generate() {
     msgs.value = res.messages
     problems.value = res.problems ?? []
     saved.value = true
+    streamText.value = '' // otherwise the Message card stays open, empty, once sending starts
     await load(view.value!.id)
   }, 'workWrite')
 }
@@ -225,6 +229,7 @@ function reset() {
 }
 
 const key = (m: Msg) => label(m).replace(/ /g, '-')
+const statusName = (s: string) => (hasKey('status_' + s) ? t(('status_' + s) as Key) : s)
 const languageName = (code: string) => (code === 'tr' || code === 'en' ? t(`lang_${code}`) : code)
 const limitFor = (m: Msg) => (m.channel === 'sms' ? LIMITS.sms : LIMITS.subject)
 const sizeFor = (m: Msg) => runes(m.channel === 'sms' ? m.body : m.subject)
@@ -316,9 +321,9 @@ onUnmounted(() => es?.close())
       <template v-if="status === 'draft'">
         <template v-if="suggestion">
           <div class="counts">
-            <div v-for="(n, ch) in suggestion.counts" :key="ch" class="count">
+            <div v-for="[ch, n] in inOrder(suggestion.counts)" :key="ch" class="count">
               <span class="count-n">{{ n }}</span>
-              <span>{{ t(ch as 'sms' | 'email') }}</span>
+              <span>{{ t(ch) }}</span>
             </div>
           </div>
           <p class="hint">{{ t('audienceIntro') }}</p>
@@ -347,7 +352,7 @@ onUnmounted(() => es?.close())
           </li>
         </ul>
         <p v-if="Object.keys(audienceCounts).length">
-          <span v-for="(n, ch) in audienceCounts" :key="ch" class="chip">{{ t(ch as 'sms' | 'email') }}: {{ t('recipients', { n }) }}</span>
+          <span v-for="[ch, n] in inOrder(audienceCounts)" :key="ch" class="chip">{{ t(ch) }}: {{ t('recipients', { n }) }}</span>
         </p>
         <p v-if="audienceEmpty" class="warn">{{ t('channelEmpty') }}</p>
       </template>
@@ -415,7 +420,7 @@ onUnmounted(() => es?.close())
         <button class="secondary" :disabled="busy" @click="cancelSchedule">{{ t('cancelSchedule') }}</button>
       </div>
       <template v-else>
-        <p>{{ t('statusLine', { status: dash.status || status, done: prog.done, total: prog.total }) }}</p>
+        <p>{{ t('statusLine', { status: statusName(dash.status || status), done: prog.done, total: prog.total }) }}</p>
         <div class="bar" role="progressbar" :aria-label="t('delivery')" :aria-valuenow="prog.pct" aria-valuemin="0" aria-valuemax="100">
           <div :style="{ width: prog.pct + '%' }"></div>
         </div>
@@ -839,7 +844,7 @@ h5 {
 }
 .status-row {
   display: grid;
-  grid-template-columns: 110px 1fr 90px;
+  grid-template-columns: 140px 1fr 90px;
   align-items: center;
   gap: 10px;
   margin-bottom: 8px;
