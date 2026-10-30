@@ -20,7 +20,7 @@ var next = map[string][]string{
 	AudienceReady: {AudienceReady, ContentReady},
 	ContentReady:  {AudienceReady, ContentReady, Approved, Scheduled},
 	Approved:      {Sending},
-	Scheduled:     {Sending},
+	Scheduled:     {Sending, ContentReady},
 	Sending:       {Completed},
 }
 

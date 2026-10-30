@@ -11,8 +11,9 @@ import (
 )
 
 type ContentRequest struct {
-	Brief    string
-	Channels []string
+	Brief string
+	// Slots are the messages to write: one per channel, variant and language.
+	Slots []content.Slot
 	// Set on a repair round: the rejected output and what was wrong with it.
 	Previous json.RawMessage
 	Problems []string
@@ -55,7 +56,7 @@ func BuildContent(ctx context.Context, c Client, req ContentRequest, s Stream, c
 	if err != nil {
 		return nil, nil, err
 	}
-	msgs, problems := parseMessages(raw, req.Channels)
+	msgs, problems := parseMessages(raw, req.Slots)
 	if len(problems) == 0 {
 		problems = check(msgs)
 	}
@@ -69,14 +70,14 @@ func BuildContent(ctx context.Context, c Client, req ContentRequest, s Stream, c
 	if err != nil {
 		return nil, nil, err
 	}
-	msgs, shape := parseMessages(raw, req.Channels)
+	msgs, shape := parseMessages(raw, req.Slots)
 	if len(shape) > 0 {
 		return nil, nil, &InvalidContentError{Raw: raw, Problems: shape}
 	}
 	return msgs, check(msgs), nil
 }
 
-func parseMessages(raw json.RawMessage, channels []string) ([]content.Message, []string) {
+func parseMessages(raw json.RawMessage, slots []content.Slot) ([]content.Message, []string) {
 	var out struct {
 		Messages []content.Message `json:"messages"`
 	}
@@ -86,18 +87,18 @@ func parseMessages(raw json.RawMessage, channels []string) ([]content.Message, [
 		return nil, []string{"invalid JSON: " + err.Error()}
 	}
 	var problems []string
-	seen := map[string]int{}
+	seen := map[content.Slot]int{}
 	for _, m := range out.Messages {
-		seen[m.Channel]++
+		seen[m.Slot()]++
 	}
-	for _, ch := range channels {
-		if seen[ch] != 1 {
-			problems = append(problems, fmt.Sprintf("need exactly one %s message, got %d", ch, seen[ch]))
+	for _, sl := range slots {
+		if seen[sl] != 1 {
+			problems = append(problems, fmt.Sprintf("need exactly one %s message for variant %s in %s, got %d", sl.Channel, sl.Variant, sl.Language, seen[sl]))
 		}
-		delete(seen, ch)
+		delete(seen, sl)
 	}
-	for ch := range seen {
-		problems = append(problems, fmt.Sprintf("unexpected channel %q", ch))
+	for sl := range seen {
+		problems = append(problems, fmt.Sprintf("unexpected message %s/%s/%s", sl.Channel, sl.Variant, sl.Language))
 	}
 	return out.Messages, problems
 }

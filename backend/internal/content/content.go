@@ -16,11 +16,26 @@ const (
 // Vars are the placeholders a template may use, e.g. {{first_name}}.
 var Vars = []string{"first_name", "last_name", "city"}
 
+// Message is the copy for one channel, A/B variant and audience language.
 type Message struct {
-	Channel string `json:"channel"`
-	Subject string `json:"subject"`
-	Body    string `json:"body"`
+	Channel  string `json:"channel"`
+	Variant  string `json:"variant"`
+	Language string `json:"language"`
+	Subject  string `json:"subject"`
+	Body     string `json:"body"`
 }
+
+// Slot names a message that a campaign needs.
+type Slot struct {
+	Channel  string `json:"channel"`
+	Variant  string `json:"variant"`
+	Language string `json:"language"`
+}
+
+func (m Message) Slot() Slot { return Slot{m.Channel, m.Variant, m.Language} }
+
+// Label names the message in problem lists, e.g. "sms A tr"; the UI matches on it.
+func (m Message) Label() string { return m.Channel + " " + m.Variant + " " + m.Language }
 
 var placeholder = regexp.MustCompile(`\{\{([^{}]*)\}\}`)
 
@@ -38,7 +53,7 @@ func Render(tmpl string, vars map[string]string) string {
 // count runes (not bytes), personalization included.
 func Check(m Message, vars map[string]string) []string {
 	var problems []string
-	add := func(format string, a ...any) { problems = append(problems, m.Channel+": "+fmt.Sprintf(format, a...)) }
+	add := func(format string, a ...any) { problems = append(problems, m.Label()+": "+fmt.Sprintf(format, a...)) }
 
 	known := map[string]bool{}
 	for _, v := range Vars {

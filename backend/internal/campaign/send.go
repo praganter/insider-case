@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/praganter/insider-case/backend/internal/segment"
 	"github.com/praganter/insider-case/backend/internal/store"
@@ -14,12 +15,33 @@ import (
 // that is already sending only re-queues messages that were never queued (for
 // example after a crash between the two steps); queued ones are not repeated.
 func (s *Service) Send(ctx context.Context, id int64) (int, error) {
+	return s.send(ctx, id, Approved)
+}
+
+// SendDue is the queued task of a scheduled campaign. It does nothing for a
+// campaign that was cancelled or rescheduled to later (a stale task).
+func (s *Service) SendDue(ctx context.Context, id int64) error {
+	c, err := s.Store.GetCampaign(ctx, id)
+	if err != nil {
+		return err
+	}
+	if c.Status == Scheduled && (c.ScheduledAt == nil || c.ScheduledAt.After(time.Now())) {
+		return nil
+	}
+	if c.Status != Scheduled && c.Status != Sending {
+		return nil
+	}
+	_, err = s.send(ctx, id, Scheduled)
+	return err
+}
+
+func (s *Service) send(ctx context.Context, id int64, from string) (int, error) {
 	c, err := s.Store.GetCampaign(ctx, id)
 	if err != nil {
 		return 0, err
 	}
 	switch c.Status {
-	case Approved:
+	case from:
 		var rule segment.Node
 		if err := json.Unmarshal(c.Rule, &rule); err != nil {
 			return 0, err
@@ -32,7 +54,7 @@ func (s *Service) Send(ctx context.Context, id int64) (int, error) {
 			}
 			parts = append(parts, store.FanOut{Channel: ch, Where: where, Args: args})
 		}
-		if err := s.Store.StartSending(ctx, id, parts); err != nil {
+		if err := s.Store.StartSending(ctx, id, from, c.ABTest, parts); err != nil {
 			if errors.Is(err, store.ErrStateChanged) {
 				return 0, &ConflictError{c.Status, Sending}
 			}

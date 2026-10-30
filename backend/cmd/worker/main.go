@@ -10,6 +10,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/praganter/insider-case/backend/internal/campaign"
 	"github.com/praganter/insider-case/backend/internal/sender"
 	"github.com/praganter/insider-case/backend/internal/store"
 )
@@ -41,6 +42,12 @@ func main() {
 	})
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(sender.TaskType, h.Process)
+
+	// A scheduled campaign fans out and queues its messages from here, so the
+	// worker needs the queue client the API uses too.
+	queue := asynq.NewClient(asynq.RedisClientOpt{Addr: redisAddr})
+	defer queue.Close()
+	mux.HandleFunc(sender.CampaignTaskType, sender.CampaignHandler(&campaign.Service{Store: st, Enqueue: sender.NewEnqueuer(queue)}))
 	log.Printf("worker started (rate %d/s per channel)", rate)
 	log.Fatal(srv.Run(mux))
 }

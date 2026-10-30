@@ -12,6 +12,9 @@ func TestCanMove(t *testing.T) {
 		{ContentReady, Approved, true},
 		{ContentReady, AudienceReady, true},
 		{Approved, Sending, true},
+		{ContentReady, Scheduled, true},
+		{Scheduled, Sending, true},
+		{Scheduled, ContentReady, true},
 		{Sending, Completed, true},
 		// Nothing is sent without approval, and nothing skips a step.
 		{Draft, ContentReady, false},
@@ -23,6 +26,8 @@ func TestCanMove(t *testing.T) {
 		{Approved, ContentReady, false},
 		{Approved, AudienceReady, false},
 		{Completed, Sending, false},
+		{Approved, Scheduled, false},
+		{Scheduled, Approved, false},
 		{"bogus", Approved, false},
 	}
 	for _, tt := range tests {

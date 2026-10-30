@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
@@ -17,21 +18,27 @@ type FanOut struct {
 	Args    []any
 }
 
-// StartSending moves an approved campaign to sending and creates one message
+// variantSQL splits the audience in two by a stable hash of the user id (the
+// same person always lands in the same group); without an A/B test everyone gets A.
+// hashtext can be negative, and & 1 is safe where abs() could overflow.
+const variantSQL = `CASE WHEN %s THEN chr(65 + (hashtext(u.id::text) & 1)) ELSE 'A' END`
+
+// StartSending moves an approved (or due scheduled) campaign to sending and creates one message
 // per audience member and channel. ON CONFLICT DO NOTHING plus the table's
 // UNIQUE(campaign_id, user_id, channel) means a repeated call cannot duplicate.
-func (s *Store) StartSending(ctx context.Context, id int64, parts []FanOut) error {
+func (s *Store) StartSending(ctx context.Context, id int64, from string, abTest bool, parts []FanOut) error {
 	return s.inTx(ctx, func(tx pgx.Tx) error {
-		if err := moveTx(ctx, tx, id, "approved", "sending", ""); err != nil {
+		if err := moveTx(ctx, tx, id, from, "sending", ""); err != nil {
 			return err
 		}
 		for _, p := range parts {
 			// Builder args are $1..$n; ours follow them.
 			n := len(p.Args)
-			q := `INSERT INTO messages (campaign_id, user_id, channel, language)
-				SELECT $` + strconv.Itoa(n+1) + `, u.id, $` + strconv.Itoa(n+2) + `, u.language
+			q := `INSERT INTO messages (campaign_id, user_id, channel, language, variant)
+				SELECT $` + strconv.Itoa(n+1) + `, u.id, $` + strconv.Itoa(n+2) + `, u.language, ` +
+				fmt.Sprintf(variantSQL, "$"+strconv.Itoa(n+3)+"::boolean") + `
 				FROM users u WHERE ` + p.Where + ` ON CONFLICT DO NOTHING`
-			if _, err := tx.Exec(ctx, q, append(append([]any{}, p.Args...), id, p.Channel)...); err != nil {
+			if _, err := tx.Exec(ctx, q, append(append([]any{}, p.Args...), id, p.Channel, abTest)...); err != nil {
 				return err
 			}
 		}
@@ -78,6 +85,29 @@ func (s *Store) MessageCounts(ctx context.Context, campaignID int64) (map[string
 	return out, rows.Err()
 }
 
+// VariantCounts is the number of messages per variant and status, for A/B results.
+func (s *Store) VariantCounts(ctx context.Context, campaignID int64) (map[string]map[string]int, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT variant, status, count(*) FROM messages WHERE campaign_id = $1 GROUP BY variant, status`, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]map[string]int{}
+	for rows.Next() {
+		var v, st string
+		var n int
+		if err := rows.Scan(&v, &st, &n); err != nil {
+			return nil, err
+		}
+		if out[v] == nil {
+			out[v] = map[string]int{}
+		}
+		out[v][st] = n
+	}
+	return out, rows.Err()
+}
+
 // Outgoing is everything a worker needs to deliver one message.
 type Outgoing struct {
 	ID         int64
@@ -97,7 +127,7 @@ func (s *Store) GetOutgoing(ctx context.Context, id int64) (Outgoing, error) {
 		       c.subject, c.body
 		FROM messages m
 		JOIN users u ON u.id = m.user_id
-		JOIN campaign_contents c ON c.campaign_id = m.campaign_id AND c.channel = m.channel AND c.variant = m.variant
+		JOIN campaign_contents c ON c.campaign_id = m.campaign_id AND c.channel = m.channel AND c.variant = m.variant AND c.language = m.language
 		WHERE m.id = $1`, id).
 		Scan(&o.ID, &o.CampaignID, &o.Status, &o.Channel, &first, &last, &city, &email, &phone,
 			&o.Template.Subject, &o.Template.Body)

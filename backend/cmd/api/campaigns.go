@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/praganter/insider-case/backend/internal/campaign"
 	"github.com/praganter/insider-case/backend/internal/content"
@@ -20,11 +21,12 @@ func registerCampaigns(mux *http.ServeMux, svc *campaign.Service) {
 		var req struct {
 			Brief    string   `json:"brief"`
 			Channels []string `json:"channels"`
+			ABTest   bool     `json:"ab_test"`
 		}
 		if !decode(w, r, &req) {
 			return
 		}
-		c, err := svc.Create(r.Context(), req.Brief, req.Channels)
+		c, err := svc.Create(r.Context(), req.Brief, req.Channels, req.ABTest)
 		reply(w, err, http.StatusCreated, c)
 	})
 
@@ -106,6 +108,30 @@ func registerCampaigns(mux *http.ServeMux, svc *campaign.Service) {
 		}
 		at, err := svc.Approve(r.Context(), id)
 		reply(w, err, http.StatusOK, map[string]any{"status": campaign.Approved, "approved_at": at})
+	})
+
+	// Approval with a send time; the queue starts the campaign then.
+	mux.HandleFunc("POST /campaigns/{id}/schedule", func(w http.ResponseWriter, r *http.Request) {
+		id, ok := pathID(w, r)
+		if !ok {
+			return
+		}
+		var req struct {
+			At time.Time `json:"at"`
+		}
+		if !decode(w, r, &req) {
+			return
+		}
+		approvedAt, err := svc.Schedule(r.Context(), id, req.At)
+		reply(w, err, http.StatusOK, map[string]any{"status": campaign.Scheduled, "approved_at": approvedAt, "scheduled_at": req.At})
+	})
+
+	mux.HandleFunc("POST /campaigns/{id}/unschedule", func(w http.ResponseWriter, r *http.Request) {
+		id, ok := pathID(w, r)
+		if !ok {
+			return
+		}
+		reply(w, svc.Unschedule(r.Context(), id), http.StatusOK, map[string]any{"status": campaign.ContentReady})
 	})
 }
 

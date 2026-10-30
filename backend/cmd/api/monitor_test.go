@@ -38,14 +38,14 @@ func monitorServer(t *testing.T) (*httptest.Server, *pgxpool.Pool, int64) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := st.CreateCampaign(ctx, "brief", []string{"sms"})
+	c, err := st.CreateCampaign(ctx, "brief", []string{"sms"}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO messages (campaign_id, user_id, channel, language, status) VALUES ($1, 1, 'sms', 'tr', 'sent')`, c.ID); err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(newMux(st, llm.Mock{}, nil))
+	srv := httptest.NewServer(newMux(st, llm.Mock{}, nil, nil))
 	t.Cleanup(srv.Close)
 	return srv, pool, c.ID
 }

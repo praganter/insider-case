@@ -219,10 +219,10 @@ func sse(r reply) string {
 	return out + event("message_stop", `{"type":"message_stop"}`)
 }
 
-const validContent = `{"messages":[{"channel":"sms","subject":"","body":"Merhaba {{first_name}}"}]}`
+const validContent = `{"messages":[{"channel":"sms","variant":"A","language":"tr","subject":"","body":"Merhaba {{first_name}}"}]}`
 
 func contentReq() ContentRequest {
-	return ContentRequest{Brief: "Ankara kampanyası", Channels: []string{"sms"}}
+	return ContentRequest{Brief: "Ankara kampanyası", Slots: slots("sms")}
 }
 
 func TestAnthropicContentStreams(t *testing.T) {
@@ -280,7 +280,7 @@ func TestAnthropicContentAPIErrors(t *testing.T) {
 }
 
 func TestAnthropicContentRepairSendsProblems(t *testing.T) {
-	long := `{"messages":[{"channel":"sms","subject":"","body":"` + strings.Repeat("x", 170) + `"}]}`
+	long := `{"messages":[{"channel":"sms","variant":"A","language":"tr","subject":"","body":"` + strings.Repeat("x", 170) + `"}]}`
 	a, bodies, _ := fakeAPI(t, reply{text: long}, reply{text: validContent})
 	msgs, problems, err := BuildContent(context.Background(), a, contentReq(), Stream{}, limitCheck)
 	if err != nil || len(problems) != 0 || len(msgs) != 1 {

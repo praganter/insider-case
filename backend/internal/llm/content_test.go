@@ -29,7 +29,7 @@ func TestMockContentIsAlwaysWithinLimits(t *testing.T) {
 		"",
 	}
 	for _, b := range briefs {
-		msgs, problems, err := BuildContent(context.Background(), Mock{}, ContentRequest{Brief: b, Channels: []string{"sms", "email"}}, Stream{}, limitCheck)
+		msgs, problems, err := BuildContent(context.Background(), Mock{}, ContentRequest{Brief: b, Slots: slots("sms", "email")}, Stream{}, limitCheck)
 		if err != nil || len(problems) > 0 {
 			t.Fatalf("%q: err=%v problems=%v", b, err, problems)
 		}
@@ -41,7 +41,7 @@ func TestMockContentIsAlwaysWithinLimits(t *testing.T) {
 
 func TestMockContentFollowsBrief(t *testing.T) {
 	get := func(brief string) []content.Message {
-		msgs, _, err := BuildContent(context.Background(), Mock{}, ContentRequest{Brief: brief, Channels: []string{"sms", "email"}}, Stream{}, noViolations)
+		msgs, _, err := BuildContent(context.Background(), Mock{}, ContentRequest{Brief: brief, Slots: slots("sms", "email")}, Stream{}, noViolations)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -55,7 +55,12 @@ func TestMockContentFollowsBrief(t *testing.T) {
 	if !strings.Contains(formal[0].Body, "Sayın {{first_name}} {{last_name}}") {
 		t.Errorf("formal tone: %q", formal[0].Body)
 	}
-	en := get("Customers with a cart, 10% discount")
+	enMsgs, _, err := BuildContent(context.Background(), Mock{}, ContentRequest{Brief: "Customers with a cart, 10% discount",
+		Slots: []content.Slot{{Channel: "sms", Variant: "A", Language: "en"}, {Channel: "email", Variant: "A", Language: "en"}}}, Stream{}, noViolations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	en := enMsgs
 	if !strings.Contains(en[0].Body, "Hi {{first_name}}") || !strings.Contains(en[0].Body, "10% off") {
 		t.Errorf("english: %q", en[0].Body)
 	}
@@ -65,7 +70,7 @@ func TestMockContentFollowsBrief(t *testing.T) {
 }
 
 func TestMockOnlyRequestedChannels(t *testing.T) {
-	msgs, _, err := BuildContent(context.Background(), Mock{}, ContentRequest{Brief: "x", Channels: []string{"email"}}, Stream{}, noViolations)
+	msgs, _, err := BuildContent(context.Background(), Mock{}, ContentRequest{Brief: "x", Slots: slots("email")}, Stream{}, noViolations)
 	if err != nil || len(msgs) != 1 || msgs[0].Channel != "email" {
 		t.Fatalf("got %+v, %v", msgs, err)
 	}
@@ -75,7 +80,7 @@ func TestMockStreamsInPieces(t *testing.T) {
 	var deltas []string
 	var resets int
 	s := Stream{Delta: func(d string) { deltas = append(deltas, d) }, Reset: func() { resets++ }}
-	raw, err := Mock{}.Content(context.Background(), ContentRequest{Brief: "x", Channels: []string{"sms"}}, s)
+	raw, err := Mock{}.Content(context.Background(), ContentRequest{Brief: "x", Slots: slots("sms")}, s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +92,7 @@ func TestMockStreamsInPieces(t *testing.T) {
 func TestMockStreamStopsOnCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err := Mock{Delay: 1}.Content(ctx, ContentRequest{Brief: "x", Channels: []string{"sms"}}, Stream{})
+	_, err := Mock{Delay: 1}.Content(ctx, ContentRequest{Brief: "x", Slots: slots("sms")}, Stream{})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("got %v", err)
 	}
@@ -98,7 +103,7 @@ func TestMockStreamStopsOnCancel(t *testing.T) {
 func TestContentRepairOnLimitViolation(t *testing.T) {
 	var resets int
 	msgs, problems, err := BuildContent(context.Background(), Mock{BadFirst: true},
-		ContentRequest{Brief: "x", Channels: []string{"sms"}}, Stream{Reset: func() { resets++ }}, limitCheck)
+		ContentRequest{Brief: "x", Slots: slots("sms")}, Stream{Reset: func() { resets++ }}, limitCheck)
 	if err != nil || len(problems) > 0 {
 		t.Fatalf("err=%v problems=%v", err, problems)
 	}
@@ -110,8 +115,8 @@ func TestContentRepairOnLimitViolation(t *testing.T) {
 // If the model keeps breaking a limit, the user still gets the text plus the
 // problems, so they can edit it.
 func TestContentViolationsAfterRepairAreReturned(t *testing.T) {
-	c := &stubClient{rule: `{"messages":[{"channel":"sms","subject":"","body":"` + strings.Repeat("x", 170) + `"}]}`}
-	msgs, problems, err := BuildContent(context.Background(), c, ContentRequest{Brief: "x", Channels: []string{"sms"}}, Stream{}, limitCheck)
+	c := &stubClient{rule: `{"messages":[{"channel":"sms","variant":"A","language":"tr","subject":"","body":"` + strings.Repeat("x", 170) + `"}]}`}
+	msgs, problems, err := BuildContent(context.Background(), c, ContentRequest{Brief: "x", Slots: slots("sms")}, Stream{}, limitCheck)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,15 +131,15 @@ func TestContentViolationsAfterRepairAreReturned(t *testing.T) {
 func TestContentShapeProblems(t *testing.T) {
 	tests := []struct{ name, raw string }{
 		{"not json", `nope`},
-		{"missing channel", `{"messages":[{"channel":"sms","subject":"","body":"hi"}]}`},
-		{"duplicate channel", `{"messages":[{"channel":"sms","subject":"","body":"a"},{"channel":"sms","subject":"","body":"b"},{"channel":"email","subject":"s","body":"b"}]}`},
-		{"extra channel", `{"messages":[{"channel":"sms","subject":"","body":"a"},{"channel":"email","subject":"s","body":"b"},{"channel":"push","subject":"","body":"c"}]}`},
+		{"missing channel", `{"messages":[{"channel":"sms","variant":"A","language":"tr","subject":"","body":"hi"}]}`},
+		{"duplicate channel", `{"messages":[{"channel":"sms","variant":"A","language":"tr","subject":"","body":"a"},{"channel":"sms","variant":"A","language":"tr","subject":"","body":"b"},{"channel":"email","variant":"A","language":"tr","subject":"s","body":"b"}]}`},
+		{"extra channel", `{"messages":[{"channel":"sms","variant":"A","language":"tr","subject":"","body":"a"},{"channel":"email","variant":"A","language":"tr","subject":"s","body":"b"},{"channel":"push","variant":"A","language":"tr","subject":"","body":"c"}]}`},
 		{"unknown key", `{"messages":[],"note":"x"}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &stubClient{rule: tt.raw}
-			_, _, err := BuildContent(context.Background(), c, ContentRequest{Brief: "x", Channels: []string{"sms", "email"}}, Stream{}, noViolations)
+			_, _, err := BuildContent(context.Background(), c, ContentRequest{Brief: "x", Slots: slots("sms", "email")}, Stream{}, noViolations)
 			var ice *InvalidContentError
 			if !errors.As(err, &ice) || len(ice.Problems) == 0 {
 				t.Fatalf("want InvalidContentError, got %v", err)
@@ -147,8 +152,42 @@ func TestContentShapeProblems(t *testing.T) {
 }
 
 func TestContentErrorPassesThrough(t *testing.T) {
-	_, _, err := BuildContent(context.Background(), Mock{Err: ErrRefused}, ContentRequest{Channels: []string{"sms"}}, Stream{}, noViolations)
+	_, _, err := BuildContent(context.Background(), Mock{Err: ErrRefused}, ContentRequest{Slots: slots("sms")}, Stream{}, noViolations)
 	if !errors.Is(err, ErrRefused) {
 		t.Fatalf("got %v", err)
+	}
+}
+
+// slots is one Turkish variant-A slot per channel.
+func slots(channels ...string) []content.Slot {
+	var out []content.Slot
+	for _, ch := range channels {
+		out = append(out, content.Slot{Channel: ch, Variant: "A", Language: "tr"})
+	}
+	return out
+}
+
+// One brief, two languages and two variants: the mock follows the slots, and
+// variant B differs from A.
+func TestMockContentPerLanguageAndVariant(t *testing.T) {
+	var want []content.Slot
+	for _, l := range []string{"tr", "en"} {
+		for _, v := range []string{"A", "B"} {
+			want = append(want, content.Slot{Channel: "sms", Variant: v, Language: l})
+		}
+	}
+	msgs, problems, err := BuildContent(context.Background(), Mock{}, ContentRequest{Brief: "Sepeti terk edenlere %20 indirim", Slots: want}, Stream{}, limitCheck)
+	if err != nil || len(problems) > 0 || len(msgs) != 4 {
+		t.Fatalf("msgs=%+v problems=%v err=%v", msgs, problems, err)
+	}
+	if !strings.Contains(msgs[0].Body, "Merhaba") || !strings.Contains(msgs[2].Body, "Hi {{first_name}}") || msgs[0].Body == msgs[1].Body {
+		t.Errorf("language or variant not followed: %+v", msgs)
+	}
+	// A slot left out is a shape error, not a silently missing translation.
+	c := &stubClient{rule: `{"messages":[{"channel":"sms","variant":"A","language":"tr","subject":"","body":"x"}]}`}
+	_, _, err = BuildContent(context.Background(), c, ContentRequest{Brief: "x", Slots: want}, Stream{}, noViolations)
+	var ice *InvalidContentError
+	if !errors.As(err, &ice) {
+		t.Errorf("missing slots: %v", err)
 	}
 }

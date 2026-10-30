@@ -46,8 +46,12 @@ func registerMonitor(mux *http.ServeMux, st *store.Store) {
 		for {
 			c, err := st.GetCampaign(r.Context(), id)
 			var counts map[string]int
+			var variants map[string]map[string]int
 			if err == nil {
 				counts, err = st.MessageCounts(r.Context(), id)
+			}
+			if err == nil {
+				variants, err = st.VariantCounts(r.Context(), id)
 			}
 			if err != nil {
 				if r.Context().Err() != nil {
@@ -62,7 +66,7 @@ func registerMonitor(mux *http.ServeMux, st *store.Store) {
 				sse.send("error", body)
 				return
 			}
-			snapshot := map[string]any{"status": c.Status, "counts": counts}
+			snapshot := map[string]any{"status": c.Status, "counts": counts, "variants": variants}
 			if b, _ := json.Marshal(snapshot); string(b) != last {
 				sse.send("counts", snapshot)
 				last = string(b)

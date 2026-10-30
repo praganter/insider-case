@@ -22,25 +22,28 @@ type Campaign struct {
 	ID         int64           `json:"id"`
 	Brief      string          `json:"brief"`
 	Channels   []string        `json:"channels"`
+	ABTest     bool            `json:"ab_test"`
 	Status     string          `json:"status"`
 	Rule       json.RawMessage `json:"segment_rule"`
 	CreatedAt  time.Time       `json:"created_at"`
 	ApprovedAt *time.Time      `json:"approved_at"`
+	// ScheduledAt is set while the campaign waits in the scheduled status.
+	ScheduledAt *time.Time `json:"scheduled_at"`
 }
 
-func (s *Store) CreateCampaign(ctx context.Context, brief string, channels []string) (Campaign, error) {
-	c := Campaign{Brief: brief, Channels: channels, Status: "draft"}
+func (s *Store) CreateCampaign(ctx context.Context, brief string, channels []string, abTest bool) (Campaign, error) {
+	c := Campaign{Brief: brief, Channels: channels, ABTest: abTest, Status: "draft"}
 	err := s.pool.QueryRow(ctx,
-		`INSERT INTO campaigns (brief, channels) VALUES ($1, $2) RETURNING id, created_at`,
-		brief, channels).Scan(&c.ID, &c.CreatedAt)
+		`INSERT INTO campaigns (brief, channels, ab_test) VALUES ($1, $2, $3) RETURNING id, created_at`,
+		brief, channels, abTest).Scan(&c.ID, &c.CreatedAt)
 	return c, err
 }
 
 func (s *Store) GetCampaign(ctx context.Context, id int64) (Campaign, error) {
 	var c Campaign
 	err := s.pool.QueryRow(ctx,
-		`SELECT id, brief, channels, status, segment_rule, created_at, approved_at FROM campaigns WHERE id = $1`, id).
-		Scan(&c.ID, &c.Brief, &c.Channels, &c.Status, &c.Rule, &c.CreatedAt, &c.ApprovedAt)
+		`SELECT id, brief, channels, ab_test, status, segment_rule, created_at, approved_at, scheduled_at FROM campaigns WHERE id = $1`, id).
+		Scan(&c.ID, &c.Brief, &c.Channels, &c.ABTest, &c.Status, &c.Rule, &c.CreatedAt, &c.ApprovedAt, &c.ScheduledAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return c, ErrNotFound
 	}
@@ -49,7 +52,7 @@ func (s *Store) GetCampaign(ctx context.Context, id int64) (Campaign, error) {
 
 func (s *Store) GetContents(ctx context.Context, id int64) ([]content.Message, error) {
 	rows, err := s.pool.Query(ctx,
-		`SELECT channel, subject, body FROM campaign_contents WHERE campaign_id = $1 ORDER BY channel`, id)
+		`SELECT channel, variant, language, subject, body FROM campaign_contents WHERE campaign_id = $1 ORDER BY channel, language, variant`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +60,7 @@ func (s *Store) GetContents(ctx context.Context, id int64) ([]content.Message, e
 	var out []content.Message
 	for rows.Next() {
 		var m content.Message
-		if err := rows.Scan(&m.Channel, &m.Subject, &m.Body); err != nil {
+		if err := rows.Scan(&m.Channel, &m.Variant, &m.Language, &m.Subject, &m.Body); err != nil {
 			return nil, err
 		}
 		out = append(out, m)
@@ -88,8 +91,8 @@ func (s *Store) SaveContents(ctx context.Context, id int64, from string, msgs []
 		}
 		for _, m := range msgs {
 			if _, err := tx.Exec(ctx,
-				`INSERT INTO campaign_contents (campaign_id, channel, subject, body) VALUES ($1, $2, $3, $4)`,
-				id, m.Channel, m.Subject, m.Body); err != nil {
+				`INSERT INTO campaign_contents (campaign_id, channel, variant, language, subject, body) VALUES ($1, $2, $3, $4, $5, $6)`,
+				id, m.Channel, m.Variant, m.Language, m.Subject, m.Body); err != nil {
 				return err
 			}
 		}
@@ -97,9 +100,21 @@ func (s *Store) SaveContents(ctx context.Context, id int64, from string, msgs []
 	})
 }
 
-func (s *Store) Approve(ctx context.Context, id int64) error {
+// Approve moves the campaign to approved, or to scheduled when at is given.
+func (s *Store) Approve(ctx context.Context, id int64, at *time.Time) error {
 	return s.inTx(ctx, func(tx pgx.Tx) error {
+		if at != nil {
+			return moveTx(ctx, tx, id, "content_ready", "scheduled", "approved_at = now(), scheduled_at = $3", *at)
+		}
 		return moveTx(ctx, tx, id, "content_ready", "approved", "approved_at = now()")
+	})
+}
+
+// Unschedule takes a scheduled campaign back to content_ready; it must be
+// approved again.
+func (s *Store) Unschedule(ctx context.Context, id int64) error {
+	return s.inTx(ctx, func(tx pgx.Tx) error {
+		return moveTx(ctx, tx, id, "scheduled", "content_ready", "approved_at = NULL, scheduled_at = NULL")
 	})
 }
 
@@ -136,32 +151,44 @@ func (s *Store) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return tx.Commit(ctx)
 }
 
-// Audience is the size of a segment and, per template variable, its longest
-// value, so content limits can be checked against the worst case.
+// Audience is the size of a segment, split by user language. Each language
+// keeps, per template variable, its longest value, so content limits can be
+// checked against the worst case of the people who will read that copy.
 type Audience struct {
-	Count   int
-	Longest map[string]string
+	Count  int
+	ByLang map[string]map[string]string // language -> variable -> longest value
 }
 
 // AudienceStats takes a WHERE clause produced by segment.Build.
 func (s *Store) AudienceStats(ctx context.Context, where string, args []any) (Audience, error) {
 	// Column names come from the fixed content.Vars list, never from input.
-	q := "SELECT count(*)"
+	q := "SELECT u.language, count(*)"
 	for _, v := range content.Vars {
 		q += ", coalesce((array_agg(" + v + " ORDER BY char_length(" + v + ") DESC))[1], '')"
 	}
-	q += " FROM users u WHERE " + where
-	a := Audience{Longest: map[string]string{}}
-	vals := make([]string, len(content.Vars))
-	dest := []any{&a.Count}
-	for i := range vals {
-		dest = append(dest, &vals[i])
-	}
-	if err := s.pool.QueryRow(ctx, q, args...).Scan(dest...); err != nil {
+	q += " FROM users u WHERE " + where + " GROUP BY u.language"
+	a := Audience{ByLang: map[string]map[string]string{}}
+	rows, err := s.pool.Query(ctx, q, args...)
+	if err != nil {
 		return a, err
 	}
-	for i, v := range content.Vars {
-		a.Longest[v] = vals[i]
+	defer rows.Close()
+	for rows.Next() {
+		var lang string
+		var n int
+		vals := make([]string, len(content.Vars))
+		dest := []any{&lang, &n}
+		for i := range vals {
+			dest = append(dest, &vals[i])
+		}
+		if err := rows.Scan(dest...); err != nil {
+			return a, err
+		}
+		a.Count += n
+		a.ByLang[lang] = map[string]string{}
+		for i, v := range content.Vars {
+			a.ByLang[lang][v] = vals[i]
+		}
 	}
-	return a, nil
+	return a, rows.Err()
 }

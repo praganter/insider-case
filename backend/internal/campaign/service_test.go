@@ -39,6 +39,13 @@ func newService(t *testing.T, ai llm.Client) *Service {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Forty English-speaking users in Bursa (ids 100..139), enough that an A/B split
+	// cannot put everyone on one side by chance.
+	_, err = pool.Exec(ctx, `INSERT INTO users SELECT i, 'Bo', 'Lee', i || '@example.com', i::text, 'Bursa', 'en', 'male', 1990, true, true, now()
+		FROM generate_series(100, 139) i`)
+	if err != nil {
+		t.Fatal(err)
+	}
 	st, err := store.New(ctx, dbURL)
 	if err != nil {
 		t.Fatal(err)
@@ -62,7 +69,7 @@ func status(t *testing.T, s *Service, id int64) string {
 func TestHappyPath(t *testing.T) {
 	ctx := context.Background()
 	s := newService(t, llm.Mock{})
-	c, err := s.Create(ctx, "Ankara'daki kullanıcılara %10 indirim", []string{"sms", "email"})
+	c, err := s.Create(ctx, "Ankara'daki kullanıcılara %10 indirim", []string{"sms", "email"}, false)
 	if err != nil || c.Status != Draft {
 		t.Fatalf("create: %+v %v", c, err)
 	}
@@ -98,7 +105,7 @@ func TestHappyPath(t *testing.T) {
 func TestCannotSkipSteps(t *testing.T) {
 	ctx := context.Background()
 	s := newService(t, llm.Mock{})
-	c, _ := s.Create(ctx, "x", []string{"sms"})
+	c, _ := s.Create(ctx, "x", []string{"sms"}, false)
 	var ce *ConflictError
 	if _, err := s.Approve(ctx, c.ID); !errors.As(err, &ce) {
 		t.Errorf("approve from draft: %v", err)
@@ -122,13 +129,13 @@ func TestCannotSkipSteps(t *testing.T) {
 func TestOverLimitBlocksApprovalUntilFixed(t *testing.T) {
 	ctx := context.Background()
 	s := newService(t, llm.Mock{})
-	c, _ := s.Create(ctx, "x", []string{"sms"})
+	c, _ := s.Create(ctx, "x", []string{"sms"}, false)
 	s.SetAudience(ctx, c.ID, cityRule("Ankara"))
 	if _, err := s.GenerateContent(ctx, c.ID, llm.Stream{}); err != nil {
 		t.Fatal(err)
 	}
 
-	res, err := s.EditContent(ctx, c.ID, []content.Message{{Channel: "sms", Body: strings.Repeat("a", 161)}})
+	res, err := s.EditContent(ctx, c.ID, []content.Message{{Channel: "sms", Variant: "A", Language: "tr", Body: strings.Repeat("a", 161)}})
 	if err != nil || len(res.Problems) == 0 {
 		t.Fatalf("161 chars should be reported: %+v %v", res, err)
 	}
@@ -140,7 +147,7 @@ func TestOverLimitBlocksApprovalUntilFixed(t *testing.T) {
 		t.Error("blocked approval must leave the status alone")
 	}
 
-	res, err = s.EditContent(ctx, c.ID, []content.Message{{Channel: "sms", Body: strings.Repeat("a", 160)}})
+	res, err = s.EditContent(ctx, c.ID, []content.Message{{Channel: "sms", Variant: "A", Language: "tr", Body: strings.Repeat("a", 160)}})
 	if err != nil || len(res.Problems) != 0 {
 		t.Fatalf("160 chars should pass: %+v %v", res, err)
 	}
@@ -153,12 +160,12 @@ func TestOverLimitBlocksApprovalUntilFixed(t *testing.T) {
 func TestLongestNameInAudienceBlocksApproval(t *testing.T) {
 	ctx := context.Background()
 	s := newService(t, llm.Mock{})
-	c, _ := s.Create(ctx, "x", []string{"sms"})
+	c, _ := s.Create(ctx, "x", []string{"sms"}, false)
 	s.SetAudience(ctx, c.ID, cityRule("Ankara"))
 	s.GenerateContent(ctx, c.ID, llm.Stream{})
 
 	body := "{{first_name}} " + strings.Repeat("a", 135) // 150 raw, 175 with the 40-letter name
-	res, _ := s.EditContent(ctx, c.ID, []content.Message{{Channel: "sms", Body: body}})
+	res, _ := s.EditContent(ctx, c.ID, []content.Message{{Channel: "sms", Variant: "A", Language: "tr", Body: body}})
 	if len(res.Problems) == 0 || !strings.Contains(res.Problems[0], "after personalization") {
 		t.Fatalf("want worst-case violation, got %v", res.Problems)
 	}
@@ -174,7 +181,7 @@ func TestLongestNameInAudienceBlocksApproval(t *testing.T) {
 	if _, err := s.GenerateContent(ctx, c.ID, llm.Stream{}); err != nil {
 		t.Fatal(err)
 	}
-	res, err := s.EditContent(ctx, c.ID, []content.Message{{Channel: "sms", Body: body}})
+	res, err := s.EditContent(ctx, c.ID, []content.Message{{Channel: "sms", Variant: "A", Language: "tr", Body: body}})
 	if err != nil || len(res.Problems) != 0 {
 		t.Errorf("short names only: %+v %v", res, err)
 	}
@@ -186,7 +193,7 @@ func TestLongestNameInAudienceBlocksApproval(t *testing.T) {
 func TestEmptyAudienceBlocksApproval(t *testing.T) {
 	ctx := context.Background()
 	s := newService(t, llm.Mock{})
-	c, _ := s.Create(ctx, "x", []string{"sms"})
+	c, _ := s.Create(ctx, "x", []string{"sms"}, false)
 	counts, err := s.SetAudience(ctx, c.ID, cityRule("Nowhere"))
 	if err != nil || counts["sms"] != 0 {
 		t.Fatalf("zero audience is allowed: %v %v", counts, err)
@@ -201,7 +208,7 @@ func TestEmptyAudienceBlocksApproval(t *testing.T) {
 func TestChangingAudienceDropsContent(t *testing.T) {
 	ctx := context.Background()
 	s := newService(t, llm.Mock{})
-	c, _ := s.Create(ctx, "x", []string{"sms"})
+	c, _ := s.Create(ctx, "x", []string{"sms"}, false)
 	s.SetAudience(ctx, c.ID, cityRule("Ankara"))
 	s.GenerateContent(ctx, c.ID, llm.Stream{})
 	if _, err := s.SetAudience(ctx, c.ID, cityRule("Ankara")); err != nil {
@@ -216,7 +223,7 @@ func TestChangingAudienceDropsContent(t *testing.T) {
 func TestApprovedCampaignIsFrozen(t *testing.T) {
 	ctx := context.Background()
 	s := newService(t, llm.Mock{})
-	c, _ := s.Create(ctx, "x", []string{"sms"})
+	c, _ := s.Create(ctx, "x", []string{"sms"}, false)
 	s.SetAudience(ctx, c.ID, cityRule("Ankara"))
 	s.GenerateContent(ctx, c.ID, llm.Stream{})
 	if _, err := s.Approve(ctx, c.ID); err != nil {
@@ -229,7 +236,7 @@ func TestApprovedCampaignIsFrozen(t *testing.T) {
 	if _, err := s.GenerateContent(ctx, c.ID, llm.Stream{}); !errors.As(err, &ce) {
 		t.Errorf("generate: %v", err)
 	}
-	if _, err := s.EditContent(ctx, c.ID, []content.Message{{Channel: "sms", Body: "new"}}); !errors.As(err, &ce) {
+	if _, err := s.EditContent(ctx, c.ID, []content.Message{{Channel: "sms", Variant: "A", Language: "tr", Body: "new"}}); !errors.As(err, &ce) {
 		t.Errorf("edit: %v", err)
 	}
 	if _, err := s.Approve(ctx, c.ID); !errors.As(err, &ce) {
@@ -242,14 +249,14 @@ func TestInvalidInput(t *testing.T) {
 	s := newService(t, llm.Mock{})
 	var ie *InputError
 	for _, ch := range [][]string{nil, {"push"}, {"sms", "sms"}} {
-		if _, err := s.Create(ctx, "x", ch); !errors.As(err, &ie) {
+		if _, err := s.Create(ctx, "x", ch, false); !errors.As(err, &ie) {
 			t.Errorf("channels %v: %v", ch, err)
 		}
 	}
-	if _, err := s.Create(ctx, " ", []string{"sms"}); !errors.As(err, &ie) {
+	if _, err := s.Create(ctx, " ", []string{"sms"}, false); !errors.As(err, &ie) {
 		t.Errorf("empty brief: %v", err)
 	}
-	c, _ := s.Create(ctx, "x", []string{"sms"})
+	c, _ := s.Create(ctx, "x", []string{"sms"}, false)
 	bad := segment.Node{Match: "all", Conditions: []segment.Node{{Field: "password", Op: "eq", Value: "x"}}}
 	if _, err := s.SetAudience(ctx, c.ID, bad); !errors.As(err, &ie) {
 		t.Errorf("bad rule: %v", err)
@@ -259,7 +266,7 @@ func TestInvalidInput(t *testing.T) {
 	}
 	s.SetAudience(ctx, c.ID, cityRule("Ankara"))
 	s.GenerateContent(ctx, c.ID, llm.Stream{})
-	if _, err := s.EditContent(ctx, c.ID, []content.Message{{Channel: "email", Subject: "s", Body: "b"}}); !errors.As(err, &ie) {
+	if _, err := s.EditContent(ctx, c.ID, []content.Message{{Channel: "email", Variant: "A", Language: "tr", Subject: "s", Body: "b"}}); !errors.As(err, &ie) {
 		t.Errorf("wrong channel set: %v", err)
 	}
 }
@@ -267,7 +274,7 @@ func TestInvalidInput(t *testing.T) {
 func TestLLMFailureLeavesCampaignInPlace(t *testing.T) {
 	ctx := context.Background()
 	s := newService(t, llm.Mock{Err: llm.ErrUnavailable})
-	c, _ := s.Create(ctx, "x", []string{"sms"})
+	c, _ := s.Create(ctx, "x", []string{"sms"}, false)
 	s.SetAudience(ctx, c.ID, cityRule("Ankara"))
 	if _, err := s.GenerateContent(ctx, c.ID, llm.Stream{}); !errors.Is(err, llm.ErrUnavailable) {
 		t.Fatalf("got %v", err)
@@ -280,7 +287,7 @@ func TestLLMFailureLeavesCampaignInPlace(t *testing.T) {
 func TestRepairedContentIsStored(t *testing.T) {
 	ctx := context.Background()
 	s := newService(t, llm.Mock{BadFirst: true})
-	c, _ := s.Create(ctx, "x", []string{"sms"})
+	c, _ := s.Create(ctx, "x", []string{"sms"}, false)
 	s.SetAudience(ctx, c.ID, cityRule("Ankara"))
 	res, err := s.GenerateContent(ctx, c.ID, llm.Stream{})
 	if err != nil || len(res.Problems) != 0 {

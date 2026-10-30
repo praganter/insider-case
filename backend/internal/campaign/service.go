@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -29,6 +31,8 @@ type Service struct {
 	LLM   llm.Client
 	// Enqueue hands one message to the queue; it must treat a repeat as a no-op.
 	Enqueue func(ctx context.Context, messageID int64) error
+	// EnqueueAt asks the queue to call SendDue for the campaign at the given time.
+	EnqueueAt func(ctx context.Context, campaignID int64, at time.Time) error
 }
 
 type View struct {
@@ -36,6 +40,8 @@ type View struct {
 	Contents []content.Message `json:"contents"`
 	// Messages counts the campaign's messages per status.
 	Messages map[string]int `json:"message_counts"`
+	// Variants counts them per A/B variant and status.
+	Variants map[string]map[string]int `json:"variant_counts"`
 }
 
 func (s *Service) Get(ctx context.Context, id int64) (View, error) {
@@ -48,10 +54,14 @@ func (s *Service) Get(ctx context.Context, id int64) (View, error) {
 		return View{}, err
 	}
 	counts, err := s.Store.MessageCounts(ctx, id)
-	return View{c, msgs, counts}, err
+	if err != nil {
+		return View{}, err
+	}
+	variants, err := s.Store.VariantCounts(ctx, id)
+	return View{c, msgs, counts, variants}, err
 }
 
-func (s *Service) Create(ctx context.Context, brief string, channels []string) (store.Campaign, error) {
+func (s *Service) Create(ctx context.Context, brief string, channels []string, abTest bool) (store.Campaign, error) {
 	var problems []string
 	if strings.TrimSpace(brief) == "" {
 		problems = append(problems, "brief is empty")
@@ -69,7 +79,7 @@ func (s *Service) Create(ctx context.Context, brief string, channels []string) (
 	if len(problems) > 0 {
 		return store.Campaign{}, &InputError{problems}
 	}
-	return s.Store.CreateCampaign(ctx, brief, channels)
+	return s.Store.CreateCampaign(ctx, brief, channels, abTest)
 }
 
 // SetAudience validates the rule for every channel of the campaign and stores
@@ -113,12 +123,13 @@ func (s *Service) audience(ctx context.Context, c store.Campaign, rule segment.N
 }
 
 // worstCase renders each message with the longest first name, last name and
-// city of its audience, so approval cannot silently lose anyone to a limit.
+// city of the audience that gets it (its channel and language), so approval
+// cannot silently lose anyone to a limit.
 func worstCase(stats map[string]store.Audience) func([]content.Message) []string {
 	return func(msgs []content.Message) []string {
 		var problems []string
 		for _, m := range msgs {
-			problems = append(problems, content.Check(m, stats[m.Channel].Longest)...)
+			problems = append(problems, content.Check(m, stats[m.Channel].ByLang[m.Language])...)
 		}
 		return problems
 	}
@@ -153,7 +164,7 @@ func (s *Service) GenerateContent(ctx context.Context, id int64, stream llm.Stre
 		return Result{}, err
 	}
 	msgs, problems, err := llm.BuildContent(ctx, s.LLM,
-		llm.ContentRequest{Brief: c.Brief, Channels: c.Channels}, stream, worstCase(stats))
+		llm.ContentRequest{Brief: c.Brief, Slots: slots(c, stats)}, stream, worstCase(stats))
 	if err != nil {
 		return Result{}, err
 	}
@@ -177,7 +188,7 @@ func (s *Service) EditContent(ctx context.Context, id int64, msgs []content.Mess
 	if err != nil {
 		return Result{}, err
 	}
-	if err := sameChannels(c.Channels, msgs); err != nil {
+	if err := sameSlots(slots(c, stats), msgs); err != nil {
 		return Result{}, err
 	}
 	if err := s.Store.SaveContents(ctx, id, c.Status, msgs); err != nil {
@@ -189,12 +200,42 @@ func (s *Service) EditContent(ctx context.Context, id int64, msgs []content.Mess
 // Approve is the only way to Approved. It re-checks the stored copy against
 // the audience as it is now, so nothing over a limit gets approved.
 func (s *Service) Approve(ctx context.Context, id int64) (time.Time, error) {
+	return s.approve(ctx, id, nil)
+}
+
+// Schedule is Approve with a send time: the same checks, then the queue starts
+// the campaign at the given time instead of the user calling Send.
+func (s *Service) Schedule(ctx context.Context, id int64, at time.Time) (time.Time, error) {
+	if !at.After(time.Now()) {
+		return time.Time{}, &InputError{[]string{"scheduled time must be in the future"}}
+	}
+	return s.approve(ctx, id, &at)
+}
+
+// Unschedule cancels a scheduled send. The queued task stays, but SendDue
+// ignores it because the campaign is no longer scheduled.
+func (s *Service) Unschedule(ctx context.Context, id int64) error {
+	c, err := s.Store.GetCampaign(ctx, id)
+	if err != nil {
+		return err
+	}
+	if c.Status != Scheduled {
+		return &ConflictError{c.Status, ContentReady}
+	}
+	return conflict(s.Store.Unschedule(ctx, id), c.Status, ContentReady)
+}
+
+func (s *Service) approve(ctx context.Context, id int64, at *time.Time) (time.Time, error) {
 	c, err := s.Store.GetCampaign(ctx, id)
 	if err != nil {
 		return time.Time{}, err
 	}
-	if !CanMove(c.Status, Approved) {
-		return time.Time{}, &ConflictError{c.Status, Approved}
+	target := Approved
+	if at != nil {
+		target = Scheduled
+	}
+	if !CanMove(c.Status, target) {
+		return time.Time{}, &ConflictError{c.Status, target}
 	}
 	stats, err := s.withAudience(ctx, c)
 	if err != nil {
@@ -210,33 +251,63 @@ func (s *Service) Approve(ctx context.Context, id int64) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
-	if err := sameChannels(c.Channels, msgs); err != nil {
+	if err := sameSlots(slots(c, stats), msgs); err != nil {
 		return time.Time{}, err
 	}
 	problems = append(problems, worstCase(stats)(msgs)...)
 	if len(problems) > 0 {
 		return time.Time{}, &LimitError{problems}
 	}
-	if err := s.Store.Approve(ctx, id); err != nil {
-		return time.Time{}, conflict(err, c.Status, Approved)
+	// Queue first: if the status change then fails, the task finds the campaign
+	// not scheduled and does nothing. The other order could lose the send.
+	if at != nil {
+		if err := s.EnqueueAt(ctx, id, *at); err != nil {
+			return time.Time{}, err
+		}
+	}
+	if err := s.Store.Approve(ctx, id, at); err != nil {
+		return time.Time{}, conflict(err, c.Status, target)
 	}
 	return time.Now(), nil
 }
 
-func sameChannels(channels []string, msgs []content.Message) error {
-	have := map[string]int{}
+// slots lists the messages a campaign needs: every channel in every language
+// its audience speaks, once per variant. A channel with nobody in it still gets
+// Turkish copy, so the empty-audience error can be shown next to it.
+func slots(c store.Campaign, stats map[string]store.Audience) []content.Slot {
+	variants := []string{"A"}
+	if c.ABTest {
+		variants = append(variants, "B")
+	}
+	var out []content.Slot
+	for _, ch := range c.Channels {
+		langs := slices.Sorted(maps.Keys(stats[ch].ByLang))
+		if len(langs) == 0 {
+			langs = []string{"tr"}
+		}
+		for _, l := range langs {
+			for _, v := range variants {
+				out = append(out, content.Slot{Channel: ch, Variant: v, Language: l})
+			}
+		}
+	}
+	return out
+}
+
+func sameSlots(want []content.Slot, msgs []content.Message) error {
+	have := map[content.Slot]int{}
 	for _, m := range msgs {
-		have[m.Channel]++
+		have[m.Slot()]++
 	}
 	var problems []string
-	for _, ch := range channels {
-		if have[ch] != 1 {
-			problems = append(problems, fmt.Sprintf("need exactly one %s message, got %d", ch, have[ch]))
+	for _, sl := range want {
+		if have[sl] != 1 {
+			problems = append(problems, fmt.Sprintf("need exactly one %s message for variant %s in %s, got %d", sl.Channel, sl.Variant, sl.Language, have[sl]))
 		}
-		delete(have, ch)
+		delete(have, sl)
 	}
-	for ch := range have {
-		problems = append(problems, fmt.Sprintf("campaign has no %s channel", ch))
+	for sl := range have {
+		problems = append(problems, fmt.Sprintf("campaign needs no %s message for variant %s in %s", sl.Channel, sl.Variant, sl.Language))
 	}
 	if len(problems) > 0 {
 		return &InputError{problems}

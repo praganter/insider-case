@@ -20,9 +20,9 @@ import (
 	"github.com/praganter/insider-case/backend/internal/store"
 )
 
-func newMux(st *store.Store, ai llm.Client, enqueue func(context.Context, int64) error) *http.ServeMux {
+func newMux(st *store.Store, ai llm.Client, enqueue func(context.Context, int64) error, enqueueAt func(context.Context, int64, time.Time) error) *http.ServeMux {
 	mux := http.NewServeMux()
-	registerCampaigns(mux, &campaign.Service{Store: st, LLM: ai, Enqueue: enqueue})
+	registerCampaigns(mux, &campaign.Service{Store: st, LLM: ai, Enqueue: enqueue, EnqueueAt: enqueueAt})
 	registerMonitor(mux, st)
 	mux.HandleFunc("GET /mode", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"mode": ai.Mode()})
@@ -129,7 +129,7 @@ func main() {
 		addr = ":8080"
 	}
 	log.Printf("api listening on %s", addr)
-	mux := newMux(st, newLLM(), enqueue)
+	mux := newMux(st, newLLM(), enqueue, sender.NewScheduler(queue))
 	registerHealth(mux, st.Ping, func(ctx context.Context) error { return rdb.Ping(ctx).Err() })
 	log.Fatal(http.ListenAndServe(addr, mux))
 }
