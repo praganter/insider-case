@@ -799,8 +799,8 @@ button:disabled {
   margin-bottom: 14px;
 }
 h4 {
-  font-size: 13px;
-  color: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
   margin: 0 0 8px;
 }
 h5 {
