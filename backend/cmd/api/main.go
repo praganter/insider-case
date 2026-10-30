@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/praganter/insider-case/backend/internal/campaign"
 	"github.com/praganter/insider-case/backend/internal/llm"
@@ -22,9 +23,7 @@ import (
 func newMux(st *store.Store, ai llm.Client, enqueue func(context.Context, int64) error) *http.ServeMux {
 	mux := http.NewServeMux()
 	registerCampaigns(mux, &campaign.Service{Store: st, LLM: ai, Enqueue: enqueue})
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.Write([]byte("ok"))
-	})
+	registerMonitor(mux, st)
 	mux.HandleFunc("POST /audience/preview", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Rule    segment.Node `json:"rule"`
@@ -120,10 +119,14 @@ func main() {
 	queue := asynq.NewClient(asynq.RedisClientOpt{Addr: os.Getenv("REDIS_ADDR")})
 	defer queue.Close()
 	enqueue := sender.NewEnqueuer(queue)
+	rdb := redis.NewClient(&redis.Options{Addr: os.Getenv("REDIS_ADDR")})
+	defer rdb.Close()
 	addr := ":" + os.Getenv("API_PORT")
 	if addr == ":" {
 		addr = ":8080"
 	}
 	log.Printf("api listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, newMux(st, newLLM(), enqueue)))
+	mux := newMux(st, newLLM(), enqueue)
+	registerHealth(mux, st.Ping, func(ctx context.Context) error { return rdb.Ping(ctx).Err() })
+	log.Fatal(http.ListenAndServe(addr, mux))
 }

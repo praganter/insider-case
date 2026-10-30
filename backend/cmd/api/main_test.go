@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,10 +12,26 @@ import (
 )
 
 func TestHealthz(t *testing.T) {
-	rec := httptest.NewRecorder()
-	newMux(nil, llm.Mock{}, nil).ServeHTTP(rec, httptest.NewRequest("GET", "/healthz", nil))
-	if rec.Code != http.StatusOK {
-		t.Fatalf("got %d, want 200", rec.Code)
+	ok := func(context.Context) error { return nil }
+	down := func(context.Context) error { return errors.New("connection refused") }
+	tests := []struct {
+		name   string
+		checks []func(context.Context) error
+		want   int
+	}{
+		{"all up", []func(context.Context) error{ok, ok}, http.StatusOK},
+		{"one down", []func(context.Context) error{ok, down}, http.StatusServiceUnavailable},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mux := http.NewServeMux()
+			registerHealth(mux, tt.checks...)
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, httptest.NewRequest("GET", "/healthz", nil))
+			if rec.Code != tt.want {
+				t.Fatalf("got %d, want %d: %s", rec.Code, tt.want, rec.Body)
+			}
+		})
 	}
 }
 

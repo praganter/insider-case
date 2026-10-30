@@ -17,6 +17,8 @@ func New(ctx context.Context, url string) (*Store, error) {
 	return &Store{pool}, nil
 }
 
+func (s *Store) Ping(ctx context.Context) error { return s.pool.Ping(ctx) }
+
 // CountAudience runs a WHERE clause produced by segment.Build over `users u`.
 func (s *Store) CountAudience(ctx context.Context, where string, args []any) (int, error) {
 	var n int

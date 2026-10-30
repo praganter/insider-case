@@ -145,3 +145,27 @@ func (s *Store) CompleteIfDone(ctx context.Context, campaignID int64) error {
 		  AND NOT EXISTS (SELECT 1 FROM messages WHERE campaign_id = $1 AND status IN ('pending', 'retrying'))`, campaignID)
 	return err
 }
+
+// MessageStat is the number of messages in one channel and status, over all campaigns.
+type MessageStat struct {
+	Channel, Status string
+	N               int
+}
+
+func (s *Store) MessageStats(ctx context.Context) ([]MessageStat, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT channel, status, count(*) FROM messages GROUP BY channel, status ORDER BY channel, status`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []MessageStat
+	for rows.Next() {
+		var m MessageStat
+		if err := rows.Scan(&m.Channel, &m.Status, &m.N); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
