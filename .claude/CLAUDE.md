@@ -48,7 +48,7 @@ ai-sessions/       sanitized Claude session exports
 - Comments explain why, not what.
 
 ## Docs
-- `README.md` and `DECISIONS.md` are bilingual (English and Turkish), each section in both languages.
+- `README.md` and `docs/DECISIONS.md` are bilingual (English and Turkish), each section in both languages.
 - README lists anything unfinished.
 
 ## Git
