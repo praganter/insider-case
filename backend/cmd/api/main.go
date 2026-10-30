@@ -54,13 +54,13 @@ func newMux(st *store.Store, ai llm.Client, enqueue func(context.Context, int64)
 	})
 	mux.HandleFunc("POST /audience/suggest", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Brief   string `json:"brief"`
-			Channel string `json:"channel"`
+			Brief    string   `json:"brief"`
+			Channels []string `json:"channels"`
 		}
 		dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
 		dec.DisallowUnknownFields()
-		if err := dec.Decode(&req); err != nil || strings.TrimSpace(req.Brief) == "" {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"errors": []string{`body must be {"brief": "...", "channel": "sms|email"}`}})
+		if err := dec.Decode(&req); err != nil || strings.TrimSpace(req.Brief) == "" || len(req.Channels) == 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"errors": []string{`body must be {"brief": "...", "channels": ["sms", "email"]}`}})
 			return
 		}
 		rule, err := llm.BuildAudience(r.Context(), ai, req.Brief)
@@ -77,19 +77,22 @@ func newMux(st *store.Store, ai llm.Client, enqueue func(context.Context, int64)
 			writeJSON(w, http.StatusBadGateway, map[string]any{"errors": []string{"The LLM is unavailable right now, please try again."}, "retry": true, "mode": ai.Mode()})
 			return
 		}
-		where, args, err := segment.Build(rule, req.Channel)
-		var ve *segment.ValidationError
-		if errors.As(err, &ve) {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"errors": ve.Problems})
-			return
+		// Consent differs per channel, so each channel gets its own count.
+		counts := map[string]int{}
+		for _, ch := range req.Channels {
+			where, args, err := segment.Build(rule, ch)
+			var ve *segment.ValidationError
+			if errors.As(err, &ve) {
+				writeJSON(w, http.StatusBadRequest, map[string]any{"errors": ve.Problems})
+				return
+			}
+			if counts[ch], err = st.CountAudience(r.Context(), where, args); err != nil {
+				log.Printf("audience suggest: %v", err)
+				writeJSON(w, http.StatusInternalServerError, map[string]any{"errors": []string{"could not count audience"}})
+				return
+			}
 		}
-		count, err := st.CountAudience(r.Context(), where, args)
-		if err != nil {
-			log.Printf("audience suggest: %v", err)
-			writeJSON(w, http.StatusInternalServerError, map[string]any{"errors": []string{"could not count audience"}})
-			return
-		}
-		writeJSON(w, http.StatusOK, map[string]any{"rule": rule, "count": count, "mode": ai.Mode()})
+		writeJSON(w, http.StatusOK, map[string]any{"rule": rule, "counts": counts, "mode": ai.Mode()})
 	})
 	return mux
 }

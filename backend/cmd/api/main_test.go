@@ -65,10 +65,11 @@ func TestSuggestErrors(t *testing.T) {
 		status int
 		want   string
 	}{
-		{"empty brief", llm.Mock{}, `{"brief":"  ","channel":"sms"}`, http.StatusBadRequest, "brief"},
-		{"unavailable is retryable, not mock", llm.Mock{Err: llm.ErrUnavailable}, `{"brief":"x","channel":"sms"}`, http.StatusBadGateway, `"retry":true`},
-		{"refusal", llm.Mock{Err: llm.ErrRefused}, `{"brief":"x","channel":"sms"}`, http.StatusUnprocessableEntity, "rewrite"},
-		{"bad channel", llm.Mock{}, `{"brief":"x","channel":"push"}`, http.StatusBadRequest, "unknown channel"},
+		{"empty brief", llm.Mock{}, `{"brief":"  ","channels":["sms"]}`, http.StatusBadRequest, "brief"},
+		{"unavailable is retryable, not mock", llm.Mock{Err: llm.ErrUnavailable}, `{"brief":"x","channels":["sms"]}`, http.StatusBadGateway, `"retry":true`},
+		{"refusal", llm.Mock{Err: llm.ErrRefused}, `{"brief":"x","channels":["sms"]}`, http.StatusUnprocessableEntity, "rewrite"},
+		{"no channels", llm.Mock{}, `{"brief":"x","channels":[]}`, http.StatusBadRequest, "channels"},
+		{"bad channel", llm.Mock{}, `{"brief":"x","channels":["push"]}`, http.StatusBadRequest, "unknown channel"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
