@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { describeRule, parseSSE, progress, runes } from './lib'
+import { describeRule, parseSSE, progress, runes, splitProblems } from './lib'
+import type { Msg } from './lib'
 
 describe('runes', () => {
   it('counts characters, not bytes or UTF-16 units', () => {
@@ -53,5 +54,18 @@ describe('describeRule', () => {
       { depth: 1, text: 'Matches any of:' },
       { depth: 2, text: 'Did not purchase in the last 1 day' },
     ])
+  })
+})
+
+describe('splitProblems', () => {
+  const m = (variant: string, language: string): Msg => ({ channel: 'sms', variant, language, subject: '', body: '' })
+  it('gives each message its own problems and keeps campaign-wide ones apart', () => {
+    const tr = m('A', 'tr')
+    const en = m('B', 'en')
+    const problems = ['sms A tr: body is 170 characters after personalization, max 160', 'sms: the audience is empty']
+    const { own, general } = splitProblems(problems, [tr, en])
+    expect(own(tr)).toEqual([problems[0]])
+    expect(own(en)).toEqual([])
+    expect(general).toEqual([problems[1]])
   })
 })

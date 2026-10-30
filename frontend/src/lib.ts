@@ -1,13 +1,20 @@
-export type Msg = { channel: 'sms' | 'email'; subject: string; body: string }
+export type Msg = { channel: 'sms' | 'email'; variant: string; language: string; subject: string; body: string }
 export type Counts = Record<string, number>
+export type VariantCounts = Record<string, Counts>
+
+// Matches the backend's Message.Label(); problem lists start with it.
+export const label = (m: Msg) => `${m.channel} ${m.variant} ${m.language}`
 export type Campaign = {
   id: number
   brief: string
   channels: string[]
+  ab_test: boolean
   status: string
+  scheduled_at: string | null
   segment_rule: unknown
   contents: Msg[] | null
   message_counts: Counts
+  variant_counts: VariantCounts | null
 }
 
 // Same unit as the backend's utf8.RuneCountInString: code points, not UTF-16 units.
@@ -67,6 +74,15 @@ export function describeRule(n: Rule, depth = 0): { depth: number; text: string 
   return [{ depth, text: `${FIELDS[n.field ?? ''] ?? n.field} ${OPS[n.op ?? ''] ?? n.op} ${v}` }]
 }
 
+// Problems that belong to one message start with its label; the rest (for
+// example an empty audience) are about the campaign as a whole.
+export function splitProblems(problems: string[], msgs: Msg[]) {
+  const labels = msgs.map(label)
+  const own = (m: Msg) => problems.filter((p) => p.startsWith(label(m) + ':'))
+  const general = problems.filter((p) => !labels.some((x) => p.startsWith(x + ':')))
+  return { own, general }
+}
+
 // "done" counts messages that reached a final state, failed ones included.
 export function progress(counts: Counts) {
   const total = Object.values(counts).reduce((a, b) => a + b, 0)
@@ -98,7 +114,8 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 
 export const api = {
   mode: () => call<{ mode: string }>('GET', '/mode'),
-  create: (brief: string, channels: string[]) => call<Campaign>('POST', '/campaigns', { brief, channels }),
+  create: (brief: string, channels: string[], abTest: boolean) =>
+    call<Campaign>('POST', '/campaigns', { brief, channels, ab_test: abTest }),
   get: (id: number) => call<Campaign>('GET', `/campaigns/${id}`),
   suggest: (brief: string, channel: string) =>
     call<{ rule: unknown; count: number }>('POST', '/audience/suggest', { brief, channel }),
@@ -108,6 +125,8 @@ export const api = {
     call<{ messages: Msg[]; problems: string[] | null }>('PUT', `/campaigns/${id}/content`, { messages }),
   approve: (id: number) => call('POST', `/campaigns/${id}/approve`),
   send: (id: number) => call('POST', `/campaigns/${id}/send`),
+  schedule: (id: number, at: Date) => call('POST', `/campaigns/${id}/schedule`, { at: at.toISOString() }),
+  unschedule: (id: number) => call('POST', `/campaigns/${id}/unschedule`),
 }
 
 // Content generation is a POST that streams, so EventSource (GET only) cannot be used.

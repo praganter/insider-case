@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { ApiError, LIMITS, api, describeRule, generateContent, progress, runes } from './lib'
-import type { Campaign, Counts, Msg } from './lib'
+import { ApiError, LIMITS, api, describeRule, generateContent, label, progress, runes, splitProblems } from './lib'
+import type { Campaign, Counts, Msg, VariantCounts } from './lib'
 
 const mode = ref('')
 const brief = ref('')
 const channels = ref<string[]>(['sms'])
+const abTest = ref(false)
+const scheduleAt = ref('')
 const view = ref<Campaign | null>(null)
 const suggestion = ref<{ rule: unknown; count: number } | null>(null)
 const audienceCounts = ref<Counts>({})
@@ -13,7 +15,7 @@ const streamText = ref('')
 const msgs = ref<Msg[]>([])
 const problems = ref<string[]>([])
 const saved = ref(true)
-const dash = ref<{ status: string; counts: Counts }>({ status: '', counts: {} })
+const dash = ref<{ status: string; counts: Counts; variants?: VariantCounts | null }>({ status: '', counts: {} })
 
 const busy = ref(false)
 const working = ref('')
@@ -53,6 +55,12 @@ const status = computed(() => view.value?.status ?? '')
 const isMock = computed(() => mode.value === 'mock')
 const sending = computed(() => status.value === 'sending' || status.value === 'completed')
 const prog = computed(() => progress(dash.value.counts))
+const showVariants = computed(() => Object.keys(dash.value.variants ?? {}).length > 1)
+const languages = computed(() => new Set(msgs.value.map((m) => m.language)).size)
+const split = computed(() => splitProblems(problems.value, msgs.value))
+const scheduledFor = computed(() => (view.value?.scheduled_at ? new Date(view.value.scheduled_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''))
+// datetime-local has no zone; the minimum is "now" in the user's own time.
+const nowLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
 const audienceEmpty = computed(
   () => Object.keys(audienceCounts.value).length > 0 && Object.values(audienceCounts.value).some((n) => n === 0),
 )
@@ -71,16 +79,17 @@ async function load(id: number) {
   location.hash = String(id)
   brief.value = v.brief
   channels.value = v.channels
+  abTest.value = v.ab_test
   if (v.contents?.length) {
     msgs.value = v.contents
     saved.value = true
   }
-  if (v.status === 'sending' || v.status === 'completed') watchProgress(v.id)
+  if (['scheduled', 'sending', 'completed'].includes(v.status)) watchProgress(v.id)
 }
 
 function createAndSuggest() {
   return run(async () => {
-    const c = await api.create(brief.value, channels.value)
+    const c = await api.create(brief.value, channels.value, abTest.value)
     view.value = c
     location.hash = String(c.id)
     await suggest()
@@ -128,6 +137,23 @@ async function save() {
   saved.value = true
 }
 
+function approveAndSchedule() {
+  return run(async () => {
+    await api.schedule(view.value!.id, new Date(scheduleAt.value))
+    await load(view.value!.id)
+  }, 'Approving and scheduling…')
+}
+
+function cancelSchedule() {
+  return run(async () => {
+    es?.close()
+    es = null
+    dash.value = { status: '', counts: {} }
+    await api.unschedule(view.value!.id)
+    await load(view.value!.id)
+  }, 'Cancelling the schedule…')
+}
+
 function approveAndSend() {
   return run(async () => {
     await api.approve(view.value!.id)
@@ -140,7 +166,11 @@ let es: EventSource | null = null
 function watchProgress(id: number) {
   if (es) return
   es = new EventSource(`/api/campaigns/${id}/events`)
-  es.addEventListener('counts', (e) => (dash.value = JSON.parse((e as MessageEvent).data)))
+  es.addEventListener('counts', (e) => {
+    dash.value = JSON.parse((e as MessageEvent).data)
+    // A scheduled campaign starts on its own; follow it into sending.
+    if (dash.value.status !== view.value?.status) load(id)
+  })
   es.addEventListener('done', (e) => {
     dash.value = JSON.parse((e as MessageEvent).data)
     es?.close()
@@ -160,14 +190,20 @@ function reset() {
   problems.value = []
   errors.value = []
   dash.value = { status: '', counts: {} }
+  abTest.value = false
+  scheduleAt.value = ''
   location.hash = ''
 }
 
-const forChannel = (ch: string) => problems.value.filter((p) => p.startsWith(ch + ':'))
+const key = (m: Msg) => label(m).replace(/ /g, '-')
+const heading = (m: Msg) =>
+  [m.channel.toUpperCase(), view.value?.ab_test ? 'variant ' + m.variant : '', languages.value > 1 ? m.language : '']
+    .filter(Boolean)
+    .join(' · ')
 const limitFor = (m: Msg) => (m.channel === 'sms' ? LIMITS.sms : LIMITS.subject)
 const sizeFor = (m: Msg) => runes(m.channel === 'sms' ? m.body : m.subject)
 const overBy = (m: Msg) => Math.max(0, sizeFor(m) - limitFor(m))
-const describedBy = (m: Msg) => `count-${m.channel}` + (forChannel(m.channel).length ? ` problems-${m.channel}` : '')
+const describedBy = (m: Msg) => `count-${key(m)}` + (split.value.own(m).length ? ` problems-${key(m)}` : '')
 
 onMounted(async () => {
   api.mode().then((m) => (mode.value = m.mode)).catch(() => {})
@@ -213,6 +249,9 @@ onUnmounted(() => es?.close())
             <input type="checkbox" :value="ch" v-model="channels" :disabled="!!view || busy" /> {{ ch }}
           </label>
         </fieldset>
+        <label class="check">
+          <input type="checkbox" v-model="abTest" :disabled="!!view || busy" /> A/B test (two versions of the copy)
+        </label>
         <button v-if="!view" :disabled="busy || !brief.trim() || !channels.length" @click="createAndSuggest">
           Suggest audience
         </button>
@@ -269,35 +308,50 @@ onUnmounted(() => es?.close())
           filled in per person. Counters show the text as written; the check under each message uses the longest names
           and cities in your audience, so nobody is cut off. Changes are saved as you type.
         </p>
-        <div v-for="m in msgs" :key="m.channel" class="msg">
-          <h3>{{ m.channel.toUpperCase() }}</h3>
+        <p v-for="p in split.general" :key="p" class="warn">{{ p }}</p>
+        <div v-for="m in msgs" :key="key(m)" class="msg">
+          <h3>{{ heading(m) }}</h3>
           <template v-if="m.channel === 'email'">
-            <label :for="'subject-' + m.channel">Subject</label>
-            <input :id="'subject-' + m.channel" v-model="m.subject" @input="edited"
-              :aria-invalid="forChannel(m.channel).length > 0" :aria-describedby="describedBy(m)" />
+            <label :for="'subject-' + key(m)">Subject</label>
+            <input :id="'subject-' + key(m)" v-model="m.subject" @input="edited"
+              :aria-invalid="split.own(m).length > 0" :aria-describedby="describedBy(m)" />
           </template>
-          <label :for="'body-' + m.channel">{{ m.channel === 'email' ? 'Email body' : 'SMS text' }}</label>
-          <textarea :id="'body-' + m.channel" v-model="m.body" rows="4" @input="edited"
-            :aria-invalid="forChannel(m.channel).length > 0" :aria-describedby="describedBy(m)"></textarea>
-          <small :id="'count-' + m.channel" :class="{ over: overBy(m) > 0 }">
+          <label :for="'body-' + key(m)">{{ m.channel === 'email' ? 'Email body' : 'SMS text' }}</label>
+          <textarea :id="'body-' + key(m)" v-model="m.body" rows="4" @input="edited"
+            :aria-invalid="split.own(m).length > 0" :aria-describedby="describedBy(m)"></textarea>
+          <small :id="'count-' + key(m)" :class="{ over: overBy(m) > 0 }">
             {{ m.channel === 'sms' ? 'Characters' : 'Subject characters' }}: {{ sizeFor(m) }} / {{ limitFor(m) }}
             <template v-if="overBy(m) > 0"> ({{ overBy(m) }} over)</template>
           </small>
-          <div :id="'problems-' + m.channel">
-            <p v-for="p in forChannel(m.channel)" :key="p" class="warn">{{ p }}</p>
+          <div :id="'problems-' + key(m)">
+            <p v-for="p in split.own(m)" :key="p" class="warn">{{ p }}</p>
           </div>
-          <p v-if="saved && !forChannel(m.channel).length" class="ok">Fits for everyone in the audience.</p>
+          <p v-if="saved && !split.own(m).length" class="ok">Fits for everyone who gets this version.</p>
         </div>
         <div class="row">
           <button class="secondary" :disabled="busy" @click="generate">Write again</button>
           <button :disabled="busy || !saved || problems.length > 0" @click="approveAndSend">Approve and send</button>
         </div>
+        <div class="row schedule">
+          <div>
+            <label for="schedule-at">Or send later</label>
+            <input id="schedule-at" type="datetime-local" v-model="scheduleAt" :min="nowLocal()" />
+          </div>
+          <button class="secondary" :disabled="busy || !saved || problems.length > 0 || !scheduleAt" @click="approveAndSchedule">
+            Approve and schedule
+          </button>
+        </div>
         <p class="hint">Nothing is sent until you approve.</p>
       </template>
     </section>
 
-    <section v-if="sending">
+    <section v-if="sending || status === 'scheduled'">
       <h2>Delivery</h2>
+      <div v-if="status === 'scheduled'" class="row">
+        <p role="status">Approved. Will be sent on <strong>{{ scheduledFor }}</strong>.</p>
+        <button class="secondary" :disabled="busy" @click="cancelSchedule">Cancel schedule</button>
+      </div>
+      <template v-else>
       <p>
         Status: <strong>{{ dash.status || status }}</strong> · {{ prog.done }} of {{ prog.total }} finished
       </p>
@@ -312,7 +366,23 @@ onUnmounted(() => es?.close())
       <p v-if="dash.counts.retrying" class="hint">
         Retrying messages hit a temporary provider error and are tried again automatically.
       </p>
+      <table v-if="showVariants" class="variants">
+        <caption>A/B results</caption>
+        <thead>
+          <tr>
+            <th scope="col">Variant</th>
+            <th v-for="s in ['pending', 'retrying', 'sent', 'failed']" :key="s" scope="col">{{ s }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(c, v) in dash.variants" :key="v">
+            <th scope="row">{{ v }}</th>
+            <td v-for="s in ['pending', 'retrying', 'sent', 'failed']" :key="s">{{ c[s] ?? 0 }}</td>
+          </tr>
+        </tbody>
+      </table>
       <p v-if="(dash.status || status) === 'completed'" class="ok" role="status">Delivery finished.</p>
+      </template>
     </section>
   </main>
 </template>
@@ -376,10 +446,10 @@ h2 {
   margin: 0 0 12px;
 }
 h3 {
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.04em;
-  margin: 0 0 6px;
-  color: var(--muted);
+  margin: 0 0 10px;
+  color: var(--text);
 }
 section {
   background: var(--card);
@@ -414,7 +484,8 @@ fieldset {
   height: 18px;
 }
 textarea,
-input:not([type]) {
+input:not([type]),
+input[type='datetime-local'] {
   display: block;
   width: 100%;
   padding: 10px 12px;
@@ -583,7 +654,17 @@ button:disabled {
   border-color: var(--bad);
 }
 .msg {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.row.schedule {
+  align-items: flex-end;
+}
+.row.schedule input {
+  width: auto;
+  margin-bottom: 0;
 }
 small {
   display: block;
@@ -625,6 +706,21 @@ section > .warn,
 }
 .chip.retrying {
   border-color: var(--warn);
+}
+.variants {
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 14px;
+}
+.variants caption {
+  text-align: left;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.variants th,
+.variants td {
+  padding: 4px 14px 4px 0;
+  text-align: left;
 }
 .bar {
   height: 12px;
