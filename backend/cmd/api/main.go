@@ -10,15 +10,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hibiken/asynq"
+
 	"github.com/praganter/insider-case/backend/internal/campaign"
 	"github.com/praganter/insider-case/backend/internal/llm"
 	"github.com/praganter/insider-case/backend/internal/segment"
+	"github.com/praganter/insider-case/backend/internal/sender"
 	"github.com/praganter/insider-case/backend/internal/store"
 )
 
-func newMux(st *store.Store, ai llm.Client) *http.ServeMux {
+func newMux(st *store.Store, ai llm.Client, enqueue func(context.Context, int64) error) *http.ServeMux {
 	mux := http.NewServeMux()
-	registerCampaigns(mux, &campaign.Service{Store: st, LLM: ai})
+	registerCampaigns(mux, &campaign.Service{Store: st, LLM: ai, Enqueue: enqueue})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte("ok"))
 	})
@@ -114,10 +117,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	queue := asynq.NewClient(asynq.RedisClientOpt{Addr: os.Getenv("REDIS_ADDR")})
+	defer queue.Close()
+	enqueue := sender.NewEnqueuer(queue)
 	addr := ":" + os.Getenv("API_PORT")
 	if addr == ":" {
 		addr = ":8080"
 	}
 	log.Printf("api listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, newMux(st, newLLM())))
+	log.Fatal(http.ListenAndServe(addr, newMux(st, newLLM(), enqueue)))
 }

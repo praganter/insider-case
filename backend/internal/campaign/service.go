@@ -27,11 +27,15 @@ func (e *LimitError) Error() string { return strings.Join(e.Problems, "; ") }
 type Service struct {
 	Store *store.Store
 	LLM   llm.Client
+	// Enqueue hands one message to the queue; it must treat a repeat as a no-op.
+	Enqueue func(ctx context.Context, messageID int64) error
 }
 
 type View struct {
 	store.Campaign
 	Contents []content.Message `json:"contents"`
+	// Messages counts the campaign's messages per status.
+	Messages map[string]int `json:"message_counts"`
 }
 
 func (s *Service) Get(ctx context.Context, id int64) (View, error) {
@@ -40,7 +44,11 @@ func (s *Service) Get(ctx context.Context, id int64) (View, error) {
 		return View{}, err
 	}
 	msgs, err := s.Store.GetContents(ctx, id)
-	return View{c, msgs}, err
+	if err != nil {
+		return View{}, err
+	}
+	counts, err := s.Store.MessageCounts(ctx, id)
+	return View{c, msgs, counts}, err
 }
 
 func (s *Service) Create(ctx context.Context, brief string, channels []string) (store.Campaign, error) {

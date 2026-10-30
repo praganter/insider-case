@@ -90,6 +90,15 @@ func registerCampaigns(mux *http.ServeMux, svc *campaign.Service) {
 		reply(w, err, http.StatusOK, res)
 	})
 
+	mux.HandleFunc("POST /campaigns/{id}/send", func(w http.ResponseWriter, r *http.Request) {
+		id, ok := pathID(w, r)
+		if !ok {
+			return
+		}
+		n, err := svc.Send(r.Context(), id)
+		reply(w, err, http.StatusAccepted, map[string]any{"queued": n})
+	})
+
 	mux.HandleFunc("POST /campaigns/{id}/approve", func(w http.ResponseWriter, r *http.Request) {
 		id, ok := pathID(w, r)
 		if !ok {
