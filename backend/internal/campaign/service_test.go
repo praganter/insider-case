@@ -3,12 +3,8 @@ package campaign
 import (
 	"context"
 	"errors"
-	"fmt"
-	"net/url"
-	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -16,37 +12,19 @@ import (
 	"github.com/praganter/insider-case/backend/internal/llm"
 	"github.com/praganter/insider-case/backend/internal/segment"
 	"github.com/praganter/insider-case/backend/internal/store"
+	"github.com/praganter/insider-case/backend/internal/testdb"
 	"github.com/praganter/insider-case/backend/migrations"
 )
 
-// newService runs against a throwaway database so it cannot clash with other
-// packages' tests. Needs TEST_DATABASE_URL (a role that may CREATE DATABASE).
 func newService(t *testing.T, ai llm.Client) *Service {
 	t.Helper()
-	base := os.Getenv("TEST_DATABASE_URL")
-	if base == "" {
-		t.Skip("TEST_DATABASE_URL not set")
-	}
 	ctx := context.Background()
-	admin, err := pgxpool.New(ctx, base)
+	dbURL := testdb.New(t)
+	pool, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
 		t.Fatal(err)
 	}
-	name := fmt.Sprintf("campaign_test_%d", time.Now().UnixNano())
-	if _, err := admin.Exec(ctx, "CREATE DATABASE "+name); err != nil {
-		t.Fatal(err)
-	}
-	u, _ := url.Parse(base)
-	u.Path = "/" + name
-	pool, err := pgxpool.New(ctx, u.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		pool.Close()
-		admin.Exec(ctx, "DROP DATABASE "+name+" WITH (FORCE)")
-		admin.Close()
-	})
+	t.Cleanup(pool.Close)
 	if err := migrations.Apply(ctx, pool); err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +39,7 @@ func newService(t *testing.T, ai llm.Client) *Service {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st, err := store.New(ctx, u.String())
+	st, err := store.New(ctx, dbURL)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/praganter/insider-case/backend/internal/segment"
 	"github.com/praganter/insider-case/backend/internal/store"
+	"github.com/praganter/insider-case/backend/internal/testdb"
 )
 
 var fixedNow = time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)
@@ -52,21 +52,15 @@ func TestGenerateKnownCounts(t *testing.T) {
 }
 
 // Runs the real builder against a real Postgres and compares with counts
-// computed in Go from the same generated data. Needs TEST_DATABASE_URL.
+// computed in Go from the same generated data.
 func TestAudienceCountsMatchSeed(t *testing.T) {
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("TEST_DATABASE_URL not set")
-	}
+	url := testdb.New(t)
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	if _, err := pool.Exec(ctx, "DROP TABLE IF EXISTS events, users"); err != nil {
-		t.Fatal(err)
-	}
 	now := time.Now()
 	if err := run(ctx, pool, now); err != nil {
 		t.Fatal(err)
