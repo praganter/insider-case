@@ -27,6 +27,10 @@ make test     # backend (Go + Postgres + Redis) and frontend (vitest), all insid
 
 **TR:** Yerel Go ya da Node gerekmez. CI aynı komutu çalıştırır. Gerçek Anthropic istemcisi sahte bir HTTP sunucusuna karşı test edilir.
 
+**EN:** Without `make` (e.g. Windows): run `docker compose run --rm --build test` and `docker compose run --rm --build test-frontend`.
+
+**TR:** `make` yoksa (örn. Windows): `docker compose run --rm --build test` ve `docker compose run --rm --build test-frontend` komutlarını çalıştırın.
+
 ## Flow / Akış
 
 **EN:**
