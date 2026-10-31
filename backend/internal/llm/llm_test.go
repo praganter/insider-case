@@ -32,6 +32,31 @@ func TestMockBriefs(t *testing.T) {
 			`{"match":"all","conditions":[{"field":"city","op":"eq","value":"İstanbul"},{"field":"language","op":"eq","value":"en"},{"event":"cart_add","within_days":30,"exists":true}]}`,
 		},
 		{
+			"turkish age range and gender",
+			"Ankara'daki 18-24 yaş arası kadınlara öğrenci indirimi",
+			`{"match":"all","conditions":[{"field":"city","op":"eq","value":"Ankara"},{"field":"gender","op":"eq","value":"female"},{"field":"age","op":"gte","value":18},{"field":"age","op":"lte","value":24}]}`,
+		},
+		{
+			"turkish age maximum with gender suffix",
+			"İzmir'deki 25 yaş altı erkeklere duyuru",
+			`{"match":"all","conditions":[{"field":"city","op":"eq","value":"İzmir"},{"field":"gender","op":"eq","value":"male"},{"field":"age","op":"lt","value":25}]}`,
+		},
+		{
+			"english age minimum, women is not men",
+			"Thank English-speaking women over 40 years old who made a purchase in the last 60 days",
+			`{"match":"all","conditions":[{"field":"language","op":"eq","value":"en"},{"field":"gender","op":"eq","value":"female"},{"field":"age","op":"gte","value":40},{"event":"purchase","within_days":60,"exists":true}]}`,
+		},
+		{
+			"turkish age minimum",
+			"40 yaş üstü kullanıcılar",
+			`{"match":"all","conditions":[{"field":"age","op":"gte","value":40}]}`,
+		},
+		{
+			"both genders is ambiguous, percent and days are not ages",
+			"kadın ve erkek müşterilere %30 indirim, 30 gün geçerli",
+			`{"match":"all","conditions":[{"event":"page_view","within_days":30,"exists":true}]}`,
+		},
+		{
 			"absurd day count is ignored",
 			"sepet 9999 gün",
 			`{"match":"all","conditions":[{"event":"cart_add","within_days":30,"exists":true}]}`,
@@ -52,7 +77,7 @@ func TestMockBriefs(t *testing.T) {
 }
 
 func TestMockOutputAlwaysValid(t *testing.T) {
-	for _, brief := range []string{"", "x", "Ankara sepet satın aldı 400 gün", "İzmir english satın almayan 1 gün"} {
+	for _, brief := range []string{"", "x", "Ankara sepet satın aldı 400 gün", "İzmir english satın almayan 1 gün", "Bursa 30 yaş altı kadınlara sepet", "18 ile 65 yaş arası erkekler"} {
 		node, err := BuildAudience(context.Background(), Mock{}, brief)
 		if err != nil {
 			t.Fatalf("%q: %v", brief, err)
