@@ -25,8 +25,8 @@ const describedBy = (m: Msg) => `count-${key(m)}` + (split.value.own(m).length ?
 
 <template>
   <section v-if="status === 'audience_ready' || status === 'content_ready' || streamText">
-    <h2>{{ t('message') }}</h2>
-    <button v-if="status === 'audience_ready'" :disabled="busy" @click="generate">{{ t('writeCopy') }}</button>
+    <header class="sec-head"><span class="sec-no">03</span><h2>{{ t('message') }}</h2></header>
+    <button v-if="status === 'audience_ready'" class="primary" :disabled="busy" @click="generate">{{ t('writeCopy') }}</button>
     <pre v-if="busy && streamText" class="stream" :aria-label="t('writing')">{{ streamText }}</pre>
 
     <template v-if="status === 'content_ready'">
@@ -50,9 +50,12 @@ const describedBy = (m: Msg) => `count-${key(m)}` + (split.value.own(m).length ?
               <label :for="'body-' + key(m)">{{ m.channel === 'email' ? t('emailBody') : t('smsText') }}</label>
               <textarea :id="'body-' + key(m)" v-model="m.body" rows="4" @input="edited"
                 :aria-invalid="split.own(m).length > 0" :aria-describedby="describedBy(m)"></textarea>
-              <small :id="'count-' + key(m)" :class="{ over: overBy(m) > 0 }">
-                {{ m.channel === 'sms' ? t('chars') : t('subjectChars') }}: {{ sizeFor(m) }} / {{ limitFor(m) }}
-                <template v-if="overBy(m) > 0"> ({{ t('over', { n: overBy(m) }) }})</template>
+              <div class="meter" :class="{ over: overBy(m) > 0, near: overBy(m) === 0 && sizeFor(m) / limitFor(m) > 0.9 }" aria-hidden="true">
+                <i :style="{ width: Math.min(100, (sizeFor(m) / limitFor(m)) * 100) + '%' }"></i>
+              </div>
+              <small :id="'count-' + key(m)" class="count-line" :class="{ over: overBy(m) > 0 }">
+                <span>{{ m.channel === 'sms' ? t('chars') : t('subjectChars') }}</span>
+                <span class="num">{{ sizeFor(m) }} / {{ limitFor(m) }}<template v-if="overBy(m) > 0"> · {{ t('over', { n: overBy(m) }) }}</template></span>
               </small>
               <div :id="'problems-' + key(m)">
                 <p v-for="p in split.own(m)" :key="p" class="warn">{{ p }}</p>
@@ -62,16 +65,16 @@ const describedBy = (m: Msg) => `count-${key(m)}` + (split.value.own(m).length ?
           </div>
         </div>
       </div>
-      <div class="row">
-        <button class="secondary" :disabled="busy" @click="generate">{{ t('writeAgain') }}</button>
-        <button :disabled="busy || !saved || problems.length > 0" @click="approveAndSend">{{ t('approveSend') }}</button>
+      <div class="actions">
+        <button class="outline" :disabled="busy" @click="generate">{{ t('writeAgain') }}</button>
+        <button class="primary" :disabled="busy || !saved || problems.length > 0" @click="approveAndSend">{{ t('approveSend') }}</button>
       </div>
-      <div class="row schedule">
+      <div class="actions schedule">
         <div>
           <label for="schedule-at">{{ t('sendLater') }}</label>
           <input id="schedule-at" type="datetime-local" v-model="scheduleAt" :min="nowLocal()" />
         </div>
-        <button class="secondary" :disabled="busy || !saved || problems.length > 0 || !scheduleAt" @click="approveAndSchedule">
+        <button class="outline" :disabled="busy || !saved || problems.length > 0 || !scheduleAt" @click="approveAndSchedule">
           {{ t('approveSchedule') }}
         </button>
       </div>

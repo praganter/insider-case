@@ -1,6 +1,6 @@
 import { computed, nextTick, ref } from 'vue'
 import { ApiError, api, generateContent } from '../lib'
-import type { Campaign, Counts, Msg, VariantCounts } from '../lib'
+import type { Campaign, CampaignRow, Counts, Msg, VariantCounts } from '../lib'
 import type { Key } from '../i18n'
 import { t } from './usePrefs'
 
@@ -17,6 +17,9 @@ const streamText = ref('')
 const msgs = ref<Msg[]>([])
 const problems = ref<string[]>([])
 const saved = ref(true)
+// The campaign list is its own page, opened with #campaigns.
+const listing = ref(false)
+const campaigns = ref<CampaignRow[]>([])
 const dash = ref<{ status: string; counts: Counts; variants?: VariantCounts | null }>({ status: '', counts: {} })
 
 const busy = ref(false)
@@ -173,7 +176,7 @@ function watchProgress(id: number) {
   })
 }
 
-function reset() {
+function clear() {
   closeProgress()
   view.value = null
   suggestion.value = null
@@ -185,22 +188,54 @@ function reset() {
   dash.value = { status: '', counts: {} }
   abTest.value = false
   scheduleAt.value = ''
+}
+
+function reset() {
+  clear()
+  listing.value = false
   location.hash = ''
+}
+
+function showList() {
+  clear()
+  listing.value = true
+  location.hash = 'campaigns'
+  return run(async () => {
+    campaigns.value = await api.list()
+  })
+}
+
+function open(id: number) {
+  clear()
+  listing.value = false
+  return run(() => load(id))
+}
+
+// Follows the address bar, so links to a campaign and the back button work.
+function syncFromHash() {
+  const h = location.hash.slice(1)
+  if (h === 'campaigns') {
+    if (!listing.value) showList()
+  } else if (Number(h)) {
+    if (listing.value || view.value?.id !== Number(h)) open(Number(h))
+  } else if (listing.value || view.value) {
+    reset()
+  }
 }
 
 // Called once by App.vue when it mounts.
 function start() {
   api.mode().then((m) => (mode.value = m.mode)).catch(() => {})
-  const id = Number(location.hash.slice(1))
-  if (id) run(() => load(id))
+  window.addEventListener('hashchange', syncFromHash)
+  syncFromHash()
 }
 
 export function useCampaign() {
   return {
-    mode, brief, channels, abTest, scheduleAt, view, suggestion, audienceCounts, streamText, msgs, problems, saved, dash,
+    mode, brief, channels, listing, campaigns, abTest, scheduleAt, view, suggestion, audienceCounts, streamText, msgs, problems, saved, dash,
     busy, working, errors, canRetry, errorBox,
     status, isMock, sending,
     run, retry, createAndSuggest, suggestAgain, useAudience, generate, edited, approveAndSchedule, cancelSchedule,
-    approveAndSend, reset, start, closeProgress,
+    approveAndSend, reset, showList, start, closeProgress,
   }
 }

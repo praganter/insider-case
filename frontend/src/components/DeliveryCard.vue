@@ -25,25 +25,28 @@ const statusName = (s: string) => (hasKey('status_' + s) ? t(('status_' + s) as 
 
 <template>
   <section v-if="sending || status === 'scheduled' || status === 'approved'">
-    <h2>{{ t('delivery') }}</h2>
+    <header class="sec-head"><span class="sec-no">04</span><h2>{{ t('delivery') }}</h2></header>
     <div v-if="status === 'approved'" class="row">
       <p role="status">{{ t('approvedNotSent') }}</p>
-      <button :disabled="busy" @click="approveAndSend">{{ t('sendNow') }}</button>
+      <button class="primary" :disabled="busy" @click="approveAndSend">{{ t('sendNow') }}</button>
     </div>
     <div v-else-if="status === 'scheduled'" class="row">
       <p role="status">{{ t('willSendOn', { when: scheduledFor }) }}</p>
-      <button class="secondary" :disabled="busy" @click="cancelSchedule">{{ t('cancelSchedule') }}</button>
+      <button class="outline" :disabled="busy" @click="cancelSchedule">{{ t('cancelSchedule') }}</button>
     </div>
     <template v-else>
-      <p>{{ t('statusLine', { status: statusName(dash.status || status), done: prog.done, total: prog.total }) }}</p>
+      <div class="hero">
+        <span class="big num">{{ prog.pct }}<small>%</small></span>
+        <p class="caption">{{ t('statusLine', { status: statusName(dash.status || status), done: prog.done, total: prog.total }) }}</p>
+      </div>
       <div class="bar" role="progressbar" :aria-label="t('delivery')" :aria-valuenow="prog.pct" aria-valuemin="0" aria-valuemax="100">
         <div :style="{ width: prog.pct + '%' }"></div>
       </div>
       <div class="delivery-groups">
         <div v-for="g in deliveryGroups" :key="g.name" class="delivery-group">
-          <h3>{{ g.name }}</h3>
+          <h3 class="group-name">{{ g.name }}</h3>
           <div v-for="b in statusBars(g.counts)" :key="b.status" class="status-row">
-            <span class="status-name">{{ t(b.status) }}</span>
+            <span class="status-name"><i class="swatch" :class="b.status"></i>{{ t(b.status) }}</span>
             <div class="track"><div class="fill" :class="b.status" :style="{ width: b.pct + '%' }"></div></div>
             <span class="status-n">{{ b.n }} <small>({{ b.pct }}%)</small></span>
           </div>
@@ -51,7 +54,7 @@ const statusName = (s: string) => (hasKey('status_' + s) ? t(('status_' + s) as 
       </div>
       <div v-if="status === 'sending' && prog.done === 0" class="row">
         <p class="hint">{{ t('notQueued') }}</p>
-        <button class="secondary" :disabled="busy" @click="approveAndSend">{{ t('sendNow') }}</button>
+        <button class="outline" :disabled="busy" @click="approveAndSend">{{ t('sendNow') }}</button>
       </div>
       <p v-if="dash.counts.retrying" class="hint">{{ t('retryingHint') }}</p>
       <p v-if="(dash.status || status) === 'completed'" class="ok" role="status">{{ t('deliveryFinished') }}</p>

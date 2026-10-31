@@ -20,13 +20,13 @@ const someChannelEmpty = computed(() => suggestionCounts.value.some((n) => n ===
 
 <template>
   <section v-if="view">
-    <h2>{{ t('audience') }}</h2>
+    <header class="sec-head"><span class="sec-no">02</span><h2>{{ t('audience') }}</h2></header>
     <template v-if="status === 'draft'">
       <template v-if="suggestion">
         <div class="counts">
           <div v-for="[ch, n] in inOrder(suggestion.counts)" :key="ch" class="count">
             <span class="count-n">{{ n }}</span>
-            <span>{{ t(ch) }}</span>
+            <span class="count-l">{{ t(ch) }}</span>
           </div>
         </div>
         <p class="hint">{{ t('audienceIntro') }}</p>
@@ -40,13 +40,13 @@ const someChannelEmpty = computed(() => suggestionCounts.value.some((n) => n ===
           <pre>{{ JSON.stringify(suggestion.rule, null, 2) }}</pre>
         </details>
         <div class="row">
-          <button :disabled="busy || nobodyMatches" @click="useAudience">{{ t('useAudience') }}</button>
-          <button class="secondary" :disabled="busy" @click="suggestAgain">{{ t('suggestAgain') }}</button>
+          <button class="primary" :disabled="busy || nobodyMatches" @click="useAudience">{{ t('useAudience') }}</button>
+          <button class="outline" :disabled="busy" @click="suggestAgain">{{ t('suggestAgain') }}</button>
         </div>
         <p v-if="nobodyMatches" class="warn">{{ t('nobody') }}</p>
         <p v-else-if="someChannelEmpty" class="warn">{{ t('channelEmpty') }}</p>
       </template>
-      <button v-else :disabled="busy" @click="suggestAgain">{{ t('suggestAudience') }}</button>
+      <button v-else class="primary" :disabled="busy" @click="suggestAgain">{{ t('suggestAudience') }}</button>
     </template>
     <template v-else>
       <ul class="rule">

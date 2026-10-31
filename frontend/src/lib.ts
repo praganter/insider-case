@@ -20,6 +20,9 @@ export type Campaign = {
   variant_counts: VariantCounts | null
 }
 
+// One row of the campaign list: enough to recognize a campaign and open it.
+export type CampaignRow = Pick<Campaign, 'id' | 'brief' | 'channels' | 'ab_test' | 'status' | 'scheduled_at'> & { created_at: string }
+
 // Same unit as the backend's utf8.RuneCountInString: code points, not UTF-16 units.
 export const runes = (s: string) => [...s].length
 
@@ -154,6 +157,7 @@ export const api = {
   mode: () => call<{ mode: string }>('GET', '/mode'),
   create: (brief: string, channels: string[], abTest: boolean) =>
     call<Campaign>('POST', '/campaigns', { brief, channels, ab_test: abTest }),
+  list: () => call<CampaignRow[]>('GET', '/campaigns'),
   get: (id: number) => call<Campaign>('GET', `/campaigns/${id}`),
   suggest: (brief: string, channels: string[]) =>
     call<{ rule: unknown; counts: Counts }>('POST', '/audience/suggest', { brief, channels }),
