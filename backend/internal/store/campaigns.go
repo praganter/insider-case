@@ -50,6 +50,26 @@ func (s *Store) GetCampaign(ctx context.Context, id int64) (Campaign, error) {
 	return c, err
 }
 
+// ListCampaigns returns the newest campaigns first. The rule is left out: the
+// list only needs enough to recognize a campaign and open it.
+func (s *Store) ListCampaigns(ctx context.Context, limit int) ([]Campaign, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT id, brief, channels, ab_test, status, created_at, approved_at, scheduled_at FROM campaigns ORDER BY id DESC LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Campaign{}
+	for rows.Next() {
+		var c Campaign
+		if err := rows.Scan(&c.ID, &c.Brief, &c.Channels, &c.ABTest, &c.Status, &c.CreatedAt, &c.ApprovedAt, &c.ScheduledAt); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 func (s *Store) GetContents(ctx context.Context, id int64) ([]content.Message, error) {
 	rows, err := s.pool.Query(ctx,
 		`SELECT channel, variant, language, subject, body FROM campaign_contents WHERE campaign_id = $1 ORDER BY channel, language, variant`, id)

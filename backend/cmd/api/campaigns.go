@@ -30,6 +30,11 @@ func registerCampaigns(mux *http.ServeMux, svc *campaign.Service) {
 		reply(w, err, http.StatusCreated, c)
 	})
 
+	mux.HandleFunc("GET /campaigns", func(w http.ResponseWriter, r *http.Request) {
+		list, err := svc.Store.ListCampaigns(r.Context(), 50)
+		reply(w, err, http.StatusOK, list)
+	})
+
 	mux.HandleFunc("GET /campaigns/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id, ok := pathID(w, r)
 		if !ok {
