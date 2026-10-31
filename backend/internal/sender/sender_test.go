@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -511,5 +512,45 @@ func TestLastAttemptInfrastructureErrorFailsTheMessage(t *testing.T) {
 	pool.QueryRow(context.Background(), `SELECT status FROM campaigns WHERE id = $1`, campaignID).Scan(&campaignStatus)
 	if status != "failed" || !strings.Contains(lastErr, "gave up") || campaignStatus != "completed" {
 		t.Errorf("message %s (%s), campaign %s", status, lastErr, campaignStatus)
+	}
+}
+
+// A message whose task Asynq archived without a recorded result must not stay pending for good,
+// and one whose task is still queued must be left alone.
+func TestReconcileFailsOnlyArchivedMessages(t *testing.T) {
+	h, pool, campaignID, msgID := oneMessage(t, true)
+	redisClient(t) // empties the test database
+	opt := asynq.RedisClientOpt{Addr: os.Getenv("REDIS_ADDR"), DB: 1}
+	client := asynq.NewClient(opt)
+	defer client.Close()
+	ctx := context.Background()
+	if err := NewEnqueuer(client)(ctx, msgID, "sms"); err != nil {
+		t.Fatal(err)
+	}
+	insp := asynq.NewInspector(opt)
+	state := func() (string, string) {
+		var m, c string
+		pool.QueryRow(ctx, `SELECT status FROM messages WHERE id = $1`, msgID).Scan(&m)
+		pool.QueryRow(ctx, `SELECT status FROM campaigns WHERE id = $1`, campaignID).Scan(&c)
+		return m, c
+	}
+
+	if err := Reconcile(ctx, h.Store, insp); err != nil {
+		t.Fatal(err)
+	}
+	if m, c := state(); m != "pending" || c != "sending" {
+		t.Fatalf("a queued task must be left alone: message %s, campaign %s", m, c)
+	}
+
+	if err := insp.ArchiveTask("sms", "message-"+strconv.FormatInt(msgID, 10)); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 { // the second run changes nothing
+		if err := Reconcile(ctx, h.Store, insp); err != nil {
+			t.Fatal(err)
+		}
+		if m, c := state(); m != "failed" || c != "completed" {
+			t.Fatalf("archived task: message %s, campaign %s, want failed and completed", m, c)
+		}
 	}
 }

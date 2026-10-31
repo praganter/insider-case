@@ -5,12 +5,15 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/praganter/insider-case/backend/internal/llm"
 	"github.com/praganter/insider-case/backend/internal/store"
@@ -45,13 +48,31 @@ func monitorServer(t *testing.T) (*httptest.Server, *pgxpool.Pool, int64) {
 	if _, err := pool.Exec(ctx, `INSERT INTO messages (campaign_id, user_id, channel, language, status) VALUES ($1, 1, 'sms', 'tr', 'sent')`, c.ID); err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(newMux(st, llm.Mock{}, nil, nil))
+	// Redis DB 2: the sender tests flush DB 1 while packages run in parallel.
+	var insp *asynq.Inspector
+	if addr := os.Getenv("REDIS_ADDR"); addr != "" {
+		rdb := redis.NewClient(&redis.Options{Addr: addr, DB: 2})
+		t.Cleanup(func() { rdb.Close() })
+		if err := rdb.FlushDB(ctx).Err(); err != nil {
+			t.Fatal(err)
+		}
+		insp = asynq.NewInspector(asynq.RedisClientOpt{Addr: addr, DB: 2})
+	}
+	srv := httptest.NewServer(newMux(st, llm.Mock{}, nil, nil, insp))
 	t.Cleanup(srv.Close)
 	return srv, pool, c.ID
 }
 
 func TestMetrics(t *testing.T) {
 	srv, _, _ := monitorServer(t)
+	// Two queued SMS tasks: the queue gauges read them from Redis.
+	client := asynq.NewClient(asynq.RedisClientOpt{Addr: os.Getenv("REDIS_ADDR"), DB: 2})
+	defer client.Close()
+	for _, id := range []string{"a", "b"} {
+		if _, err := client.Enqueue(asynq.NewTask("message:send", nil), asynq.Queue("sms"), asynq.TaskID(id)); err != nil {
+			t.Fatal(err)
+		}
+	}
 	resp, err := http.Get(srv.URL + "/metrics")
 	if err != nil {
 		t.Fatal(err)
@@ -59,8 +80,16 @@ func TestMetrics(t *testing.T) {
 	defer resp.Body.Close()
 	var sb strings.Builder
 	bufio.NewReader(resp.Body).WriteTo(&sb)
-	if want := `campaign_messages{channel="sms",status="sent"} 1`; !strings.Contains(sb.String(), want) {
-		t.Errorf("metrics %q missing %q", sb.String(), want)
+	for _, want := range []string{
+		`campaign_messages{channel="sms",status="sent"} 1`,
+		`campaign_message_attempts_total{channel="sms"} 0`,
+		`campaigns{status="draft"} 1`,
+		`campaign_queue_tasks{queue="sms",state="pending"} 2`,
+		`campaign_queue_tasks{queue="sms",state="archived"} 0`,
+	} {
+		if !strings.Contains(sb.String(), want) {
+			t.Errorf("metrics %q missing %q", sb.String(), want)
+		}
 	}
 }
 

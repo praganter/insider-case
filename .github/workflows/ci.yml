@@ -16,8 +16,9 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
       - run: go mod tidy -diff
-      - uses: golangci/golangci-lint-action@v8
+      - uses: golangci/golangci-lint-action@v9
         with:
           working-directory: backend
       - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

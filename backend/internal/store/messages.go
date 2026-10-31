@@ -187,11 +187,12 @@ func (s *Store) CompleteIfDone(ctx context.Context, campaignID int64) error {
 type MessageStat struct {
 	Channel, Status string
 	N               int
+	Attempts        int // provider calls made for these messages, retries included
 }
 
 func (s *Store) MessageStats(ctx context.Context) ([]MessageStat, error) {
 	rows, err := s.pool.Query(ctx,
-		`SELECT channel, status, count(*) FROM messages GROUP BY channel, status ORDER BY channel, status`)
+		`SELECT channel, status, count(*), coalesce(sum(attempts), 0) FROM messages GROUP BY channel, status ORDER BY channel, status`)
 	if err != nil {
 		return nil, err
 	}
@@ -199,10 +200,39 @@ func (s *Store) MessageStats(ctx context.Context) ([]MessageStat, error) {
 	var out []MessageStat
 	for rows.Next() {
 		var m MessageStat
-		if err := rows.Scan(&m.Channel, &m.Status, &m.N); err != nil {
+		if err := rows.Scan(&m.Channel, &m.Status, &m.N, &m.Attempts); err != nil {
 			return nil, err
 		}
 		out = append(out, m)
 	}
 	return out, rows.Err()
+}
+
+// FailStalled marks messages failed when Asynq archived their task before the
+// worker could record a result, and completes the campaigns that were waiting on them.
+func (s *Store) FailStalled(ctx context.Context, ids []int64, reason string) error {
+	rows, err := s.pool.Query(ctx, `
+		UPDATE messages SET status = 'failed', last_error = $2, updated_at = now()
+		WHERE id = ANY($1) AND status IN ('pending', 'retrying') RETURNING campaign_id`, ids, reason)
+	if err != nil {
+		return err
+	}
+	campaigns := map[int64]bool{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		campaigns[id] = true
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for id := range campaigns {
+		if err := s.CompleteIfDone(ctx, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
@@ -44,6 +45,16 @@ func main() {
 	})
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(sender.TaskType, h.Process)
+
+	// Messages whose task Asynq archived without a recorded result would otherwise stay pending for good.
+	insp := asynq.NewInspector(asynq.RedisClientOpt{Addr: redisAddr})
+	go func() {
+		for range time.Tick(30 * time.Second) {
+			if err := sender.Reconcile(context.Background(), st, insp); err != nil {
+				log.Printf("reconcile: %v", err)
+			}
+		}
+	}()
 
 	// A scheduled campaign fans out and queues its messages from here, so the
 	// worker needs the queue client the API uses too.

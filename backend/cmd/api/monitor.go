@@ -4,8 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 	"time"
+
+	"github.com/hibiken/asynq"
 
 	"github.com/praganter/insider-case/backend/internal/campaign"
 	"github.com/praganter/insider-case/backend/internal/store"
@@ -31,7 +35,7 @@ func registerHealth(mux *http.ServeMux, checks ...func(context.Context) error) {
 	})
 }
 
-func registerMonitor(mux *http.ServeMux, st *store.Store) {
+func registerMonitor(mux *http.ServeMux, st *store.Store, insp *asynq.Inspector) {
 	// Sends the message counts whenever they change and closes after the
 	// campaign completes.
 	mux.HandleFunc("GET /campaigns/{id}/events", func(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +98,38 @@ func registerMonitor(mux *http.ServeMux, st *store.Store) {
 		fmt.Fprint(w, "# HELP campaign_messages Messages by channel and status, all campaigns.\n# TYPE campaign_messages gauge\n")
 		for _, m := range stats {
 			fmt.Fprintf(w, "campaign_messages{channel=%q,status=%q} %d\n", m.Channel, m.Status, m.N)
+		}
+		fmt.Fprint(w, "# HELP campaign_message_attempts_total Provider calls per channel, retries included.\n# TYPE campaign_message_attempts_total counter\n")
+		attempts := map[string]int{}
+		for _, m := range stats {
+			attempts[m.Channel] += m.Attempts
+		}
+		for _, ch := range slices.Sorted(maps.Keys(attempts)) {
+			fmt.Fprintf(w, "campaign_message_attempts_total{channel=%q} %d\n", ch, attempts[ch])
+		}
+		campaigns, err := st.CampaignCounts(r.Context())
+		if err != nil {
+			return // the headers are sent; a partial scrape is better than none
+		}
+		fmt.Fprint(w, "# HELP campaigns Campaigns by status.\n# TYPE campaigns gauge\n")
+		for _, s := range slices.Sorted(maps.Keys(campaigns)) {
+			fmt.Fprintf(w, "campaigns{status=%q} %d\n", s, campaigns[s])
+		}
+		if insp == nil {
+			return
+		}
+		fmt.Fprint(w, "# HELP campaign_queue_tasks Queued tasks by queue and state (archived = gave up).\n# TYPE campaign_queue_tasks gauge\n")
+		for _, q := range []string{"sms", "email", "default"} {
+			info, err := insp.GetQueueInfo(q)
+			if err != nil {
+				continue // a queue exists only after its first task
+			}
+			for _, s := range []struct {
+				name string
+				n    int
+			}{{"pending", info.Pending}, {"active", info.Active}, {"scheduled", info.Scheduled}, {"retry", info.Retry}, {"archived", info.Archived}} {
+				fmt.Fprintf(w, "campaign_queue_tasks{queue=%q,state=%q} %d\n", q, s.name, s.n)
+			}
 		}
 	})
 }

@@ -46,7 +46,7 @@ func TestPreviewRejectsBadInput(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
-			newMux(nil, llm.Mock{}, nil, nil).ServeHTTP(rec, httptest.NewRequest("POST", "/audience/preview", strings.NewReader(tt.body)))
+			newMux(nil, llm.Mock{}, nil, nil, nil).ServeHTTP(rec, httptest.NewRequest("POST", "/audience/preview", strings.NewReader(tt.body)))
 			if rec.Code != http.StatusBadRequest {
 				t.Fatalf("got %d, want 400", rec.Code)
 			}
@@ -74,7 +74,7 @@ func TestSuggestErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
-			newMux(nil, tt.ai, nil, nil).ServeHTTP(rec, httptest.NewRequest("POST", "/audience/suggest", strings.NewReader(tt.body)))
+			newMux(nil, tt.ai, nil, nil, nil).ServeHTTP(rec, httptest.NewRequest("POST", "/audience/suggest", strings.NewReader(tt.body)))
 			if rec.Code != tt.status {
 				t.Fatalf("got %d, want %d: %s", rec.Code, tt.status, rec.Body)
 			}
@@ -88,7 +88,7 @@ func TestSuggestErrors(t *testing.T) {
 // The UI shows its MOCK badge from this, so the mode must come from the client.
 func TestMode(t *testing.T) {
 	rec := httptest.NewRecorder()
-	newMux(nil, llm.Mock{}, nil, nil).ServeHTTP(rec, httptest.NewRequest("GET", "/mode", nil))
+	newMux(nil, llm.Mock{}, nil, nil, nil).ServeHTTP(rec, httptest.NewRequest("GET", "/mode", nil))
 	if !strings.Contains(rec.Body.String(), `"mode":"mock"`) {
 		t.Errorf("body %s", rec.Body)
 	}

@@ -20,10 +20,10 @@ import (
 	"github.com/praganter/insider-case/backend/internal/store"
 )
 
-func newMux(st *store.Store, ai llm.Client, enqueue func(context.Context, int64, string) error, enqueueAt func(context.Context, int64, time.Time) error) *http.ServeMux {
+func newMux(st *store.Store, ai llm.Client, enqueue func(context.Context, int64, string) error, enqueueAt func(context.Context, int64, time.Time) error, insp *asynq.Inspector) *http.ServeMux {
 	mux := http.NewServeMux()
 	registerCampaigns(mux, &campaign.Service{Store: st, LLM: ai, Enqueue: enqueue, EnqueueAt: enqueueAt})
-	registerMonitor(mux, st)
+	registerMonitor(mux, st, insp)
 	mux.HandleFunc("GET /mode", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"mode": ai.Mode()})
 	})
@@ -106,7 +106,7 @@ func newLLM() llm.Client {
 	}
 	model := os.Getenv("CLAUDE_MODEL")
 	if model == "" {
-		model = "claude-opus-5-5"
+		model = "claude-sonnet-5-5"
 	}
 	return llm.NewAnthropic(key, model)
 }
@@ -132,7 +132,7 @@ func main() {
 		addr = ":8080"
 	}
 	log.Printf("api listening on %s", addr)
-	mux := newMux(st, newLLM(), enqueue, sender.NewScheduler(queue))
+	mux := newMux(st, newLLM(), enqueue, sender.NewScheduler(queue), asynq.NewInspector(asynq.RedisClientOpt{Addr: os.Getenv("REDIS_ADDR")}))
 	registerHealth(mux, st.Ping, func(ctx context.Context) error { return rdb.Ping(ctx).Err() })
 	log.Fatal(http.ListenAndServe(addr, mux))
 }
