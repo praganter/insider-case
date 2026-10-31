@@ -50,7 +50,7 @@ func main() {
 	insp := asynq.NewInspector(asynq.RedisClientOpt{Addr: redisAddr})
 	go func() {
 		for range time.Tick(30 * time.Second) {
-			if err := sender.Reconcile(context.Background(), st, insp); err != nil {
+			if err := sender.Reconcile(context.Background(), st, insp, h.Provider); err != nil {
 				log.Printf("reconcile: %v", err)
 			}
 		}

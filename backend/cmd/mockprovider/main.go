@@ -48,7 +48,21 @@ func (p *provider) handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /sms", p.send("sms"))
 	mux.HandleFunc("POST /email", p.send("email"))
+	mux.HandleFunc("GET /messages/{key}", p.lookup)
 	return mux
+}
+
+// lookup tells a caller that lost the answer to a send whether it was delivered.
+// It skips the injected errors and the rate limit: it is a read, not a delivery.
+func (p *provider) lookup(w http.ResponseWriter, r *http.Request) {
+	p.mu.Lock()
+	id, ok := p.seen[r.PathValue("key")]
+	p.mu.Unlock()
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	writeID(w, id)
 }
 
 func (p *provider) send(channel string) http.HandlerFunc {

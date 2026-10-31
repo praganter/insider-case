@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -118,6 +119,7 @@ type Outgoing struct {
 	ID         int64
 	CampaignID int64
 	Status     string
+	Attempts   int // provider calls so far; above 0 an earlier one may have been delivered unnoticed
 	Channel    string
 	To         string
 	Consent    bool // the person's consent for this channel right now
@@ -129,14 +131,14 @@ func (s *Store) GetOutgoing(ctx context.Context, id int64) (Outgoing, error) {
 	var o Outgoing
 	var first, last, city, email, phone string
 	err := s.pool.QueryRow(ctx, `
-		SELECT m.id, m.campaign_id, m.status, m.channel, u.first_name, u.last_name, u.city, u.email, u.phone,
+		SELECT m.id, m.campaign_id, m.status, m.attempts, m.channel, u.first_name, u.last_name, u.city, u.email, u.phone,
 		       CASE m.channel WHEN 'sms' THEN u.consent_sms ELSE u.consent_email END,
 		       c.subject, c.body
 		FROM messages m
 		JOIN users u ON u.id = m.user_id
 		JOIN campaign_contents c ON c.campaign_id = m.campaign_id AND c.channel = m.channel AND c.variant = m.variant AND c.language = m.language
 		WHERE m.id = $1`, id).
-		Scan(&o.ID, &o.CampaignID, &o.Status, &o.Channel, &first, &last, &city, &email, &phone, &o.Consent,
+		Scan(&o.ID, &o.CampaignID, &o.Status, &o.Attempts, &o.Channel, &first, &last, &city, &email, &phone, &o.Consent,
 			&o.Template.Subject, &o.Template.Body)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return o, ErrNotFound
@@ -204,6 +206,36 @@ func (s *Store) MessageStats(ctx context.Context) ([]MessageStat, error) {
 			return nil, err
 		}
 		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+// Open is a message that is neither sent nor failed yet.
+type Open struct {
+	ID         int64
+	CampaignID int64
+	Channel    string
+}
+
+// OpenMessages returns pending and retrying messages untouched for at least
+// idle, oldest first. Every status change and attempt bumps updated_at, so a
+// message a worker is handling right now is not in the result.
+func (s *Store) OpenMessages(ctx context.Context, idle time.Duration, limit int) ([]Open, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, campaign_id, channel FROM messages
+		WHERE status IN ('pending', 'retrying') AND updated_at < now() - make_interval(secs => $1)
+		ORDER BY id LIMIT $2`, idle.Seconds(), limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Open
+	for rows.Next() {
+		var o Open
+		if err := rows.Scan(&o.ID, &o.CampaignID, &o.Channel); err != nil {
+			return nil, err
+		}
+		out = append(out, o)
 	}
 	return out, rows.Err()
 }

@@ -41,6 +41,37 @@ func NewProvider(baseURL string) *Provider {
 	return &Provider{BaseURL: baseURL, HTTP: &http.Client{Timeout: 10 * time.Second}}
 }
 
+// Key is the idempotency key of a message: the provider uses it to ignore a
+// repeated delivery and to answer Lookup.
+func Key(messageID int64) string { return fmt.Sprintf("message-%d", messageID) }
+
+// Lookup asks the provider whether the message with this key was delivered, for
+// the case where we never saw the answer. It returns "" when nothing was delivered.
+func (p *Provider) Lookup(ctx context.Context, key string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.BaseURL+"/messages/"+key, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := p.HTTP.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	switch resp.StatusCode {
+	case http.StatusOK:
+		var out struct {
+			ID string `json:"id"`
+		}
+		if err := json.NewDecoder(io.LimitReader(resp.Body, 4096)).Decode(&out); err != nil || out.ID == "" {
+			return "", fmt.Errorf("provider lookup answered 200 without an id")
+		}
+		return out.ID, nil
+	case http.StatusNotFound:
+		return "", nil
+	}
+	return "", fmt.Errorf("provider lookup answered %d", resp.StatusCode)
+}
+
 // Send returns the provider's message id. Timeouts, 429 and 5xx are retryable;
 // every other 4xx is not (the message itself is wrong, retrying won't fix it).
 func (p *Provider) Send(ctx context.Context, r Request) (string, error) {

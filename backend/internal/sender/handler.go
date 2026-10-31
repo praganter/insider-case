@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand/v2"
-	"strconv"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -28,7 +27,7 @@ func NewEnqueuer(c *asynq.Client) func(ctx context.Context, messageID int64, cha
 	return func(ctx context.Context, messageID int64, channel string) error {
 		payload, _ := json.Marshal(map[string]int64{"message_id": messageID})
 		_, err := c.EnqueueContext(ctx, asynq.NewTask(TaskType, payload),
-			asynq.TaskID("message-"+strconv.FormatInt(messageID, 10)),
+			asynq.TaskID(Key(messageID)),
 			asynq.Queue(channel),
 			asynq.MaxRetry(MaxAttempts-1),
 			asynq.Timeout(30*time.Second))
@@ -72,7 +71,7 @@ func (h *Handler) Process(ctx context.Context, t *asynq.Task) (err error) {
 		return fmt.Errorf("message %d: %v: %w", p.MessageID, err, asynq.SkipRetry)
 	}
 	if err != nil {
-		// ponytail: if the database stays down through the last attempt the row stays pending; a periodic reconciler would catch that.
+		// If the database stays down through the last attempt the row stays pending; Reconcile catches that.
 		return err
 	}
 	if m.Status == "sent" || m.Status == "failed" {
@@ -90,6 +89,12 @@ func (h *Handler) Process(ctx context.Context, t *asynq.Task) (err error) {
 		}
 	}()
 
+	// An earlier attempt may have been delivered without us saving it (a lost answer, a crash
+	// before MarkSent). Asking first avoids sending again, and records the real outcome.
+	if done, err := h.recordIfDelivered(ctx, m); done {
+		return err
+	}
+
 	// Consent is checked again here: the person may have withdrawn it since the fan-out.
 	if !m.Consent {
 		return h.fail(ctx, m, "no "+m.Channel+" consent", asynq.SkipRetry)
@@ -103,6 +108,7 @@ func (h *Handler) Process(ctx context.Context, t *asynq.Task) (err error) {
 	if err := h.Store.StartAttempt(ctx, m.ID); err != nil {
 		return err
 	}
+	m.Attempts++ // the deferred give-up above and fail() see that this run may have reached the provider
 	if err := h.Limiter.Wait(ctx, m.Channel); err != nil {
 		return err // Redis trouble or shutdown: let Asynq retry
 	}
@@ -112,7 +118,7 @@ func (h *Handler) Process(ctx context.Context, t *asynq.Task) (err error) {
 		To:      m.To,
 		Subject: content.Render(m.Template.Subject, m.Vars),
 		Body:    content.Render(m.Template.Body, m.Vars),
-		Key:     fmt.Sprintf("message-%d", m.ID),
+		Key:     Key(m.ID),
 	})
 	if err == nil {
 		if err := h.Store.MarkSent(ctx, m.ID, id); err != nil {
@@ -137,9 +143,31 @@ func (h *Handler) Process(ctx context.Context, t *asynq.Task) (err error) {
 	return err
 }
 
+// recordIfDelivered asks the provider about a message that may already have gone
+// out. done is true when it was delivered; err is then only a failure to save that.
+// A provider that cannot answer counts as not delivered: the caller sends, and the
+// idempotency key still stops a duplicate.
+func (h *Handler) recordIfDelivered(ctx context.Context, m store.Outgoing) (done bool, err error) {
+	if m.Attempts == 0 {
+		return false, nil
+	}
+	id, lookupErr := h.Provider.Lookup(ctx, Key(m.ID))
+	if lookupErr != nil || id == "" {
+		return false, nil
+	}
+	if err := h.Store.MarkSent(ctx, m.ID, id); err != nil {
+		return true, err
+	}
+	return true, h.Store.CompleteIfDone(ctx, m.CampaignID)
+}
+
 // fail records the final failure. skip is asynq.SkipRetry to archive the task
-// right away, or nil when Asynq is already out of retries.
+// right away, or nil when Asynq is already out of retries. A message the provider
+// did deliver is recorded as sent instead.
 func (h *Handler) fail(ctx context.Context, m store.Outgoing, reason string, skip error) error {
+	if done, err := h.recordIfDelivered(ctx, m); done {
+		return err
+	}
 	if err := h.Store.MarkFailed(ctx, m.ID, reason); err != nil {
 		return err
 	}

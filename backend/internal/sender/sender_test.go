@@ -528,6 +528,11 @@ func TestReconcileFailsOnlyArchivedMessages(t *testing.T) {
 		t.Fatal(err)
 	}
 	insp := asynq.NewInspector(opt)
+	fake := &lookupProvider{delivered: map[string]string{}}
+	srv := httptest.NewServer(fake)
+	defer srv.Close()
+	h.Provider = NewProvider(srv.URL)
+	age := func() { ageMessage(t, pool, msgID) }
 	state := func() (string, string) {
 		var m, c string
 		pool.QueryRow(ctx, `SELECT status FROM messages WHERE id = $1`, msgID).Scan(&m)
@@ -535,7 +540,8 @@ func TestReconcileFailsOnlyArchivedMessages(t *testing.T) {
 		return m, c
 	}
 
-	if err := Reconcile(ctx, h.Store, insp); err != nil {
+	age()
+	if err := Reconcile(ctx, h.Store, insp, h.Provider); err != nil {
 		t.Fatal(err)
 	}
 	if m, c := state(); m != "pending" || c != "sending" {
@@ -545,12 +551,224 @@ func TestReconcileFailsOnlyArchivedMessages(t *testing.T) {
 	if err := insp.ArchiveTask("sms", "message-"+strconv.FormatInt(msgID, 10)); err != nil {
 		t.Fatal(err)
 	}
+	pool.Exec(ctx, `UPDATE messages SET updated_at = now() WHERE id = $1`, msgID)
+	if err := Reconcile(ctx, h.Store, insp, h.Provider); err != nil {
+		t.Fatal(err)
+	}
+	if m, _ := state(); m != "pending" {
+		t.Fatalf("a message touched a moment ago must be left alone, got %s", m)
+	}
+	age()
 	for range 2 { // the second run changes nothing
-		if err := Reconcile(ctx, h.Store, insp); err != nil {
+		if err := Reconcile(ctx, h.Store, insp, h.Provider); err != nil {
 			t.Fatal(err)
 		}
 		if m, c := state(); m != "failed" || c != "completed" {
 			t.Fatalf("archived task: message %s, campaign %s, want failed and completed", m, c)
 		}
+	}
+}
+
+// lookupProvider answers the idempotency lookup from a set of delivered keys and counts sends.
+type lookupProvider struct {
+	mu         sync.Mutex
+	delivered  map[string]string // key -> provider id
+	sends      int
+	sendStatus int // answer to every send; 0 means delivered
+}
+
+func (l *lookupProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if r.Method == http.MethodGet {
+		id, ok := l.delivered[strings.TrimPrefix(r.URL.Path, "/messages/")]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		fmt.Fprintf(w, `{"id":%q}`, id)
+		return
+	}
+	l.sends++
+	if l.sendStatus != 0 {
+		http.Error(w, "boom", l.sendStatus)
+		return
+	}
+	fmt.Fprint(w, `{"id":"p_new"}`)
+}
+
+func (l *lookupProvider) sendCount() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.sends
+}
+
+// ageMessage makes a message look untouched for an hour, as the reconciler requires.
+func ageMessage(t *testing.T, pool *pgxpool.Pool, id int64) {
+	t.Helper()
+	if _, err := pool.Exec(context.Background(), `UPDATE messages SET updated_at = now() - interval '1 hour' WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func messageState(t *testing.T, pool *pgxpool.Pool, id int64) (status, providerID string) {
+	t.Helper()
+	var pid *string
+	if err := pool.QueryRow(context.Background(), `SELECT status, provider_msg_id FROM messages WHERE id = $1`, id).Scan(&status, &pid); err != nil {
+		t.Fatal(err)
+	}
+	if pid != nil {
+		providerID = *pid
+	}
+	return
+}
+
+// An earlier attempt reached the provider but the answer was lost (MarkSent failed, or the
+// worker died). The retry must find that out and record it, not send again.
+func TestRetryOfDeliveredMessageIsRecordedNotResent(t *testing.T) {
+	h, pool, campaignID, msgID := oneMessage(t, true)
+	fake := &lookupProvider{delivered: map[string]string{Key(msgID): "p_old"}}
+	srv := httptest.NewServer(fake)
+	defer srv.Close()
+	h.Provider = NewProvider(srv.URL)
+	pool.Exec(context.Background(), `UPDATE messages SET attempts = 1, status = 'retrying' WHERE id = $1`, msgID)
+
+	if err := h.Process(context.Background(), task(msgID)); err != nil {
+		t.Fatal(err)
+	}
+	status, providerID := messageState(t, pool, msgID)
+	var campaignStatus string
+	pool.QueryRow(context.Background(), `SELECT status FROM campaigns WHERE id = $1`, campaignID).Scan(&campaignStatus)
+	if status != "sent" || providerID != "p_old" || fake.sendCount() != 0 || campaignStatus != "completed" {
+		t.Errorf("message %s (%s), sends %d, campaign %s; want sent with the original id and no new send", status, providerID, fake.sendCount(), campaignStatus)
+	}
+}
+
+// The provider delivered but answered 500 on the last attempt: that must not end as failed.
+func TestLastAttemptServerErrorAfterDeliveryIsSent(t *testing.T) {
+	h, pool, _, msgID := oneMessage(t, true)
+	fake := &lookupProvider{delivered: map[string]string{Key(msgID): "p_old"}, sendStatus: http.StatusInternalServerError}
+	srv := httptest.NewServer(fake)
+	defer srv.Close()
+	h.Provider = NewProvider(srv.URL)
+	h.Limiter = &Limiter{Redis: redisClient(t), Rate: 100, Burst: 1}
+
+	// Outside a worker Asynq reports no retry budget, so this is the last attempt.
+	if err := h.Process(context.Background(), task(msgID)); err != nil {
+		t.Fatal(err)
+	}
+	if status, providerID := messageState(t, pool, msgID); status != "sent" || providerID != "p_old" {
+		t.Errorf("message %s (%s), want sent with the provider's id", status, providerID)
+	}
+}
+
+// A provider that cannot answer the lookup must not stop the send: the idempotency key still prevents a duplicate.
+func TestUnreachableLookupDoesNotBlockTheSend(t *testing.T) {
+	h, pool, _, msgID := oneMessage(t, true)
+	fake := &lookupProvider{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			http.Error(w, "down", http.StatusServiceUnavailable)
+			return
+		}
+		fake.ServeHTTP(w, r)
+	}))
+	defer srv.Close()
+	h.Provider = NewProvider(srv.URL)
+	h.Limiter = &Limiter{Redis: redisClient(t), Rate: 100, Burst: 1}
+	pool.Exec(context.Background(), `UPDATE messages SET attempts = 1, status = 'retrying' WHERE id = $1`, msgID)
+
+	if err := h.Process(context.Background(), task(msgID)); err != nil {
+		t.Fatal(err)
+	}
+	if status, _ := messageState(t, pool, msgID); status != "sent" || fake.sendCount() != 1 {
+		t.Errorf("message %s, sends %d, want sent after one send", status, fake.sendCount())
+	}
+}
+
+func TestReconcileRecordsWhatTheProviderDelivered(t *testing.T) {
+	h, pool, campaignID, msgID := oneMessage(t, true)
+	redisClient(t) // empties the test database
+	opt := asynq.RedisClientOpt{Addr: os.Getenv("REDIS_ADDR"), DB: 1}
+	client := asynq.NewClient(opt)
+	defer client.Close()
+	ctx := context.Background()
+	if err := NewEnqueuer(client)(ctx, msgID, "sms"); err != nil {
+		t.Fatal(err)
+	}
+	insp := asynq.NewInspector(opt)
+	if err := insp.ArchiveTask("sms", Key(msgID)); err != nil {
+		t.Fatal(err)
+	}
+	fake := &lookupProvider{delivered: map[string]string{Key(msgID): "p_old"}}
+	srv := httptest.NewServer(fake)
+	defer srv.Close()
+	h.Provider = NewProvider(srv.URL)
+	ageMessage(t, pool, msgID)
+
+	if err := Reconcile(ctx, h.Store, insp, h.Provider); err != nil {
+		t.Fatal(err)
+	}
+	status, providerID := messageState(t, pool, msgID)
+	var campaignStatus string
+	pool.QueryRow(ctx, `SELECT status FROM campaigns WHERE id = $1`, campaignID).Scan(&campaignStatus)
+	if status != "sent" || providerID != "p_old" || campaignStatus != "completed" {
+		t.Errorf("message %s (%s), campaign %s; want sent and completed", status, providerID, campaignStatus)
+	}
+}
+
+func TestReconcileWaitsWhenTheProviderCannotAnswer(t *testing.T) {
+	h, pool, _, msgID := oneMessage(t, true)
+	redisClient(t)
+	opt := asynq.RedisClientOpt{Addr: os.Getenv("REDIS_ADDR"), DB: 1}
+	client := asynq.NewClient(opt)
+	defer client.Close()
+	ctx := context.Background()
+	if err := NewEnqueuer(client)(ctx, msgID, "sms"); err != nil {
+		t.Fatal(err)
+	}
+	insp := asynq.NewInspector(opt)
+	if err := insp.ArchiveTask("sms", Key(msgID)); err != nil {
+		t.Fatal(err)
+	}
+	h.Provider = NewProvider("http://127.0.0.1:1")
+	ageMessage(t, pool, msgID)
+
+	if err := Reconcile(ctx, h.Store, insp, h.Provider); err != nil {
+		t.Fatal(err)
+	}
+	if status, _ := messageState(t, pool, msgID); status != "pending" {
+		t.Errorf("message %s, want pending until the provider can answer", status)
+	}
+}
+
+func TestProviderLookup(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  int
+		body    string
+		wantID  string
+		wantErr bool
+	}{
+		{"delivered", 200, `{"id":"prov_1"}`, "prov_1", false},
+		{"unknown key", 404, "nope", "", false},
+		{"200 without id", 200, `{}`, "", true},
+		{"server error", 500, "boom", "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/messages/message-7" {
+					t.Errorf("path %q", r.URL.Path)
+				}
+				w.WriteHeader(tt.status)
+				fmt.Fprint(w, tt.body)
+			}))
+			defer srv.Close()
+			id, err := NewProvider(srv.URL).Lookup(context.Background(), Key(7))
+			if (err != nil) != tt.wantErr || id != tt.wantID {
+				t.Errorf("got %q, %v; want %q, error %v", id, err, tt.wantID, tt.wantErr)
+			}
+		})
 	}
 }

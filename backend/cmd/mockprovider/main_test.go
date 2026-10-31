@@ -37,6 +37,29 @@ func TestDeliversAndIdempotent(t *testing.T) {
 	}
 }
 
+func TestLookupFindsOnlyDeliveredKeys(t *testing.T) {
+	// Every send fails, so a key can only be known if it was delivered before.
+	p := newProvider(config{LimitPerSec: 100})
+	h := p.handler()
+	get := func(key string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest("GET", "/messages/"+key, nil))
+		return rec
+	}
+	if got := get("k1"); got.Code != 404 {
+		t.Fatalf("unknown key: %d, want 404", got.Code)
+	}
+	sent := post(h, "/sms", "k1", smsBody)
+	if got := get("k1"); got.Code != 200 || got.Body.String() != sent.Body.String() {
+		t.Errorf("delivered key: %d %q, want the id of the send %q", got.Code, got.Body, sent.Body)
+	}
+	p.cfg.ErrorRate = 1
+	post(h, "/sms", "k2", smsBody)
+	if got := get("k2"); got.Code != 404 {
+		t.Errorf("failed send must not look delivered: %d", got.Code)
+	}
+}
+
 func TestRejectsInvalidRecipients(t *testing.T) {
 	h := newProvider(config{LimitPerSec: 100}).handler()
 	if rec := post(h, "/sms", "a", `{"to":"05550000001","body":"x"}`); rec.Code != 400 {
