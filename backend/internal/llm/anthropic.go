@@ -93,12 +93,13 @@ Nest at most 3 levels and use at most %d conditions in total.
 
 Fields: %s. city, language and gender take text (ops eq, neq, in); age takes a whole number
 (eq, neq, in, gt, gte, lt, lte); created_at takes a date like 2025-01-31 (gt, gte, lt, lte).
-language values are "tr" or "en". gender values are exactly %s. "in" takes a list of at most %d items.
+language values are exactly %s. gender values are exactly %s. "in" takes a list of at most %d items.
 Events: %s, with within_days 1..%d. exists=false means the user did NOT do it in that window.
 Allowed ops: %s.
 Use only these names. Never write SQL. Use the exact city spelling from the brief (e.g. İstanbul).`,
 		now.Format("2006-01-02"), segment.MaxConditions,
-		strings.Join(fields, ", "), `"`+strings.Join(segment.Values("gender"), `" or "`)+`"`, segment.MaxInValues,
+		strings.Join(fields, ", "), `"`+strings.Join(segment.Values("language"), `" or "`)+`"`,
+		`"`+strings.Join(segment.Values("gender"), `" or "`)+`"`, segment.MaxInValues,
 		strings.Join(events, ", "), segment.MaxWithinDays, strings.Join(ops, ", "))
 }
 

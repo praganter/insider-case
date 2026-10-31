@@ -61,7 +61,7 @@ var fields = map[string]struct {
 
 // Text fields whose values are a closed set; anything else would match nobody
 // without saying so (for example "erkek" instead of "male").
-var allowedValues = map[string][]string{"gender": {"male", "female"}}
+var allowedValues = map[string][]string{"gender": {"male", "female"}, "language": {"tr", "en"}}
 
 // Values returns the allowed values of a field, or nil when any text is fine.
 func Values(field string) []string { return allowedValues[field] }
