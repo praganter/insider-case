@@ -31,7 +31,7 @@ func New(t *testing.T) string {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		admin.Exec(ctx, "DROP DATABASE "+name+" WITH (FORCE)")
+		_, _ = admin.Exec(ctx, "DROP DATABASE "+name+" WITH (FORCE)")
 		admin.Close()
 	})
 	u, _ := url.Parse(base)

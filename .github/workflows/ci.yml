@@ -1,6 +1,26 @@
 name: ci
 on: [push, pull_request]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+      - run: go mod tidy -diff
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          working-directory: backend
+      - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
   test:
     runs-on: ubuntu-latest
     steps:

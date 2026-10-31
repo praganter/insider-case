@@ -4,6 +4,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 
+# -race needs cgo, so the compiler toolchain stays out of the binary images.
+FROM build AS test
+RUN apk add --no-cache build-base
+
 FROM build AS bin
 # CMD selects which binary under cmd/ to build (api, worker, ...).
 ARG CMD=api

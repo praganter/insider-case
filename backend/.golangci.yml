@@ -1,0 +1,23 @@
+version: "2"
+formatters:
+  enable: [gofmt]
+linters:
+  settings:
+    errcheck:
+      # Write/close errors that nobody can act on: a dropped client connection,
+      # a deferred Close or a Rollback after Commit.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - (net/http.ResponseWriter).Write
+        - (*net/http.ResponseController).Flush
+        - (*encoding/json.Encoder).Encode
+        - (io.ReadCloser).Close
+        - (*database/sql.DB).Close
+        - (*github.com/hibiken/asynq.Client).Close
+        - (*github.com/redis/go-redis/v9.baseClient).Close
+        - (github.com/jackc/pgx/v5.Tx).Rollback
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [errcheck]
