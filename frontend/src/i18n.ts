@@ -61,6 +61,9 @@ const en = {
   sendLater: 'Or send later',
   approveSchedule: 'Approve and schedule',
   nothingSent: 'Nothing is sent until you approve.',
+  approvedNotSent: 'Approved, but not sent yet.',
+  sendNow: 'Send',
+  notQueued: 'Nothing delivered yet. If this does not move, send again; messages already queued are not repeated.',
 
   delivery: 'Delivery',
   willSendOn: 'Approved. Will be sent on {when}.',
@@ -170,6 +173,9 @@ const tr: Record<Key, string> = {
   sendLater: 'Ya da sonra gönder',
   approveSchedule: 'Onayla ve zamanla',
   nothingSent: 'Onaylamadan hiçbir şey gönderilmez.',
+  approvedNotSent: 'Onaylandı, ama henüz gönderilmedi.',
+  sendNow: 'Gönder',
+  notQueued: 'Henüz teslim edilen yok. İlerlemezse tekrar gönderin; kuyruğa alınmış mesajlar tekrarlanmaz.',
 
   delivery: 'Gönderim',
   willSendOn: 'Onaylandı. {when} tarihinde gönderilecek.',
