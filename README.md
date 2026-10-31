@@ -17,6 +17,42 @@ docker compose up --build
 - **EN:** Empty `ANTHROPIC_API_KEY` = rule-based mock LLM (UI shows a MOCK badge); a key switches to the real model (`CLAUDE_MODEL`). With a key, API errors are shown with a retry; the app never falls back to mock silently.
 - **TR:** Boş `ANTHROPIC_API_KEY` = kural tabanlı mock LLM (arayüzde MOCK rozeti); key varsa gerçek model kullanılır (`CLAUDE_MODEL`). Key varken API hataları tekrar dene seçeneğiyle gösterilir; mock'a sessizce düşülmez.
 
+- **EN:** Default model is `claude-sonnet-5-5`. The mock LLM understands city, language (English), gender, age (ranges, over, under), cart_add / purchase / page_view and "last N days"; anything more nuanced needs a real key. The mock provider fails 5% and answers 429 for 5% of calls (`PROVIDER_ERROR_RATE`, `PROVIDER_TOO_MANY_RATE` in `.env`) so retries and the rate limit can be seen working.
+- **TR:** Varsayılan model `claude-sonnet-5-5`. Mock LLM şehir, dil (İngilizce), cinsiyet, yaş (aralık, üstü, altı), cart_add / purchase / page_view ve "son N gün" ifadelerini anlar; daha ince ifadeler gerçek key ister. Mock provider çağrıların %5'inde hata, %5'inde 429 döner (`.env` içinde `PROVIDER_ERROR_RATE`, `PROVIDER_TOO_MANY_RATE`); böylece retry ve rate limit çalışırken görülebilir.
+
+## Example briefs / Örnek brief'ler
+
+**EN:** These work in mock mode and each finds a different audience (the first one is the case's own example). With a real key, free wording works too.
+
+**TR:** Bunlar mock modda çalışır ve her biri farklı bir kitle bulur (ilki case'in kendi örneği). Gerçek key ile serbest ifade de çalışır.
+
+1. `Son 30 günde sepetine ürün ekleyip alışveriş yapmayan İstanbul'daki kullanıcılara %30 indirim hatırlatması gönder. Samimi ama kısa olsun.` (city + cart_add + no purchase)
+2. `Ankara'daki 25 yaş altı kadınlara yeni sezon ürünlerini duyur.` (city + gender + age < 25)
+3. `Son 7 günde alışveriş yapan İzmir'deki erkeklere teşekkür mesajı gönder.` (city + gender + purchase)
+4. `Sepetine ürün ekleyen 18-24 yaş arası kullanıcılara öğrenci indirimi duyur.` (age range + cart_add)
+5. `Thank English-speaking women over 40 years old who made a purchase in the last 60 days.` (language + gender + age >= 40 + purchase)
+
+## Architecture / Mimari
+
+```
+Vue UI (nginx) --> api (HTTP + SSE) --> Postgres
+                       |                   ^
+                       v                   |
+                  Redis (Asynq) --> worker -+--> mockprovider (SMS / email)
+                       ^
+                  llm.Client (Anthropic or mock)
+```
+
+- **EN:** The API makes two LLM calls through the `llm.Client` interface: first a JSON segment rule (validated by Go, turned into parameterized SQL, never SQL from the LLM), then the streamed copy per channel x variant x language. After approval the API fans messages out (`UNIQUE(campaign_id, user_id, channel)`) into one Asynq queue per channel. The worker sends through a Redis token bucket (100/s per channel), retries with backoff, and a reconciler fails messages whose task was archived. The dashboard follows the campaign over SSE.
+- **TR:** API, `llm.Client` arayüzü üzerinden iki LLM çağrısı yapar: önce JSON segment kuralı (Go doğrular, parametreli SQL'e çevirir; LLM'den SQL gelmez), sonra kanal x varyant x dil başına akan metin. Onaydan sonra API mesajları (`UNIQUE(campaign_id, user_id, channel)`) kanal başına bir Asynq kuyruğuna dağıtır. Worker Redis token bucket'ı (kanal başına 100/sn) üzerinden gönderir, backoff ile tekrar dener; reconciler görevi archive'a düşen mesajları `failed` yapar. Dashboard kampanyayı SSE ile izler.
+
+API: `POST/GET /campaigns`, `GET /campaigns/{id}`, `PUT /campaigns/{id}/audience`, `POST|PUT /campaigns/{id}/content`, `POST /campaigns/{id}/approve|send|schedule|unschedule`, `GET /campaigns/{id}/events` (SSE), `POST /audience/suggest|preview`, `GET /mode`, `/healthz`, `/metrics`.
+
+## Known limits / Bilinen sınırlar
+
+- **EN:** `POST /audience/preview` is single-channel and not used by the UI. Backend error messages are English in the Turkish UI. The mock LLM matches keywords only, so a brief outside those patterns falls back to "active in the last N days".
+- **TR:** `POST /audience/preview` tek kanallıdır ve arayüz kullanmaz. Backend hata mesajları Türkçe arayüzde İngilizcedir. Mock LLM yalnızca anahtar kelimeleri eşler; bu kalıpların dışındaki brief "son N günde aktif" kitlesine düşer.
+
 ## Tests / Testler
 
 ```
@@ -68,7 +104,7 @@ backend/                 Go module / Go modülü
   internal/testdb        throwaway test databases / tek kullanımlık test veritabanları
   migrations/            SQL files / SQL dosyaları
   scripts/               test runner used by make test / make test'in kullandığı betik
-frontend/                Vue 3 + Vite + TypeScript (src/App.vue, src/lib.ts)
+frontend/                Vue 3 + Vite + TypeScript (src/components, src/composables, src/lib.ts)
 docs/                    plan.md, DECISIONS.md
 ai-sessions/             sanitized Claude session exports / temizlenmiş Claude oturum kayıtları
 .github/workflows/       CI

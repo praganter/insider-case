@@ -28,7 +28,7 @@ Puanlama: LLM %25, Mimari %20, Backend güvenilirlik %20, Frontend %20, Test %15
 | D16 | Gerçek Anthropic entegrasyonu key'siz test edilir: `httptest` ile sahte Anthropic sunucusu, SDK `option.WithBaseURL` ile ona yönlenir; gerçek API cevap formatları (stream event'leri, refusal, max_tokens, 529) taklit edilir | LLM %25; entegrasyon kodu key olmadan doğrulanır |
 | D17 | Key varken API hatasında mock'a **düşülmez**; kullanıcıya hata + tekrar dene | Sahte içerik gerçek gibi onaylanmasın |
 
-Varsayılanlar: resmi `anthropic-sdk-go`, model `CLAUDE_MODEL` env'den (varsayılan `claude-opus-5-5`); Vue 3 + Vite + TS, UI kütüphanesi yok/hafif.
+Varsayılanlar: resmi `anthropic-sdk-go`, model `CLAUDE_MODEL` env'den (varsayılan `claude-sonnet-5-5`); Vue 3 + Vite + TS, UI kütüphanesi yok/hafif.
 Kullanıcının key'i var: geliştirme mock ile, sonda kullanıcı gerçek key ile kısa manuel deneme yapar (Claude `.env`'i okumaz).
 
 ## LLM hata senaryoları (Claude yoksa / düzgün dönmezse)
