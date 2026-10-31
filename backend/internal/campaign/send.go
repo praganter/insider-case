@@ -65,15 +65,15 @@ func (s *Service) send(ctx context.Context, id int64, from string) (int, error) 
 		return 0, &ConflictError{c.Status, Sending}
 	}
 
-	ids, err := s.Store.PendingMessageIDs(ctx, id)
+	pending, err := s.Store.PendingMessages(ctx, id)
 	if err != nil {
 		return 0, err
 	}
-	for _, mid := range ids {
-		if err := s.Enqueue(ctx, mid); err != nil {
+	for _, m := range pending {
+		if err := s.Enqueue(ctx, m.ID, m.Channel); err != nil {
 			return 0, err
 		}
 	}
 	// A campaign whose audience turned out empty has nothing left to wait for.
-	return len(ids), s.Store.CompleteIfDone(ctx, id)
+	return len(pending), s.Store.CompleteIfDone(ctx, id)
 }

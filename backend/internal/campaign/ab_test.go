@@ -19,7 +19,7 @@ func ankaraAndBursa() segment.Node {
 func TestABTestAndLanguagesGiveOneMessagePerSlotAndSplitTheAudience(t *testing.T) {
 	ctx := context.Background()
 	s := newService(t, llm.Mock{})
-	s.Enqueue = func(context.Context, int64) error { return nil }
+	s.Enqueue = func(context.Context, int64, string) error { return nil }
 	c, _ := s.Create(ctx, "%10 indirim", []string{"sms"}, true)
 	if _, err := s.SetAudience(ctx, c.ID, ankaraAndBursa()); err != nil {
 		t.Fatal(err)
@@ -44,7 +44,7 @@ func TestABTestAndLanguagesGiveOneMessagePerSlotAndSplitTheAudience(t *testing.T
 func TestWithoutABTestEveryoneGetsVariantA(t *testing.T) {
 	ctx := context.Background()
 	s := newService(t, llm.Mock{})
-	s.Enqueue = func(context.Context, int64) error { return nil }
+	s.Enqueue = func(context.Context, int64, string) error { return nil }
 	c, _ := s.Create(ctx, "x", []string{"sms"}, false)
 	s.SetAudience(ctx, c.ID, ankaraAndBursa())
 	res, _ := s.GenerateContent(ctx, c.ID, llm.Stream{})

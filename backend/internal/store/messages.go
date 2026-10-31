@@ -46,23 +46,28 @@ func (s *Store) StartSending(ctx context.Context, id int64, from string, abTest 
 	})
 }
 
-// PendingMessageIDs are the messages not yet handed to the queue.
-func (s *Store) PendingMessageIDs(ctx context.Context, campaignID int64) ([]int64, error) {
+// Pending is a message not yet handed to the queue; the channel picks its queue.
+type Pending struct {
+	ID      int64
+	Channel string
+}
+
+func (s *Store) PendingMessages(ctx context.Context, campaignID int64) ([]Pending, error) {
 	rows, err := s.pool.Query(ctx,
-		`SELECT id FROM messages WHERE campaign_id = $1 AND status = 'pending' ORDER BY id`, campaignID)
+		`SELECT id, channel FROM messages WHERE campaign_id = $1 AND status = 'pending' ORDER BY id`, campaignID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var ids []int64
+	var out []Pending
 	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
+		var p Pending
+		if err := rows.Scan(&p.ID, &p.Channel); err != nil {
 			return nil, err
 		}
-		ids = append(ids, id)
+		out = append(out, p)
 	}
-	return ids, rows.Err()
+	return out, rows.Err()
 }
 
 // MessageCounts is the number of messages per status.
@@ -115,6 +120,7 @@ type Outgoing struct {
 	Status     string
 	Channel    string
 	To         string
+	Consent    bool // the person's consent for this channel right now
 	Template   content.Message
 	Vars       map[string]string
 }
@@ -124,12 +130,13 @@ func (s *Store) GetOutgoing(ctx context.Context, id int64) (Outgoing, error) {
 	var first, last, city, email, phone string
 	err := s.pool.QueryRow(ctx, `
 		SELECT m.id, m.campaign_id, m.status, m.channel, u.first_name, u.last_name, u.city, u.email, u.phone,
+		       CASE m.channel WHEN 'sms' THEN u.consent_sms ELSE u.consent_email END,
 		       c.subject, c.body
 		FROM messages m
 		JOIN users u ON u.id = m.user_id
 		JOIN campaign_contents c ON c.campaign_id = m.campaign_id AND c.channel = m.channel AND c.variant = m.variant AND c.language = m.language
 		WHERE m.id = $1`, id).
-		Scan(&o.ID, &o.CampaignID, &o.Status, &o.Channel, &first, &last, &city, &email, &phone,
+		Scan(&o.ID, &o.CampaignID, &o.Status, &o.Channel, &first, &last, &city, &email, &phone, &o.Consent,
 			&o.Template.Subject, &o.Template.Body)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return o, ErrNotFound

@@ -16,7 +16,7 @@ func contentReady(t *testing.T) (*Service, int64, *[]time.Time) {
 	s := newService(t, llm.Mock{})
 	var queuedAt []time.Time
 	s.EnqueueAt = func(_ context.Context, _ int64, at time.Time) error { queuedAt = append(queuedAt, at); return nil }
-	s.Enqueue = func(context.Context, int64) error { return nil }
+	s.Enqueue = func(context.Context, int64, string) error { return nil }
 	c, _ := s.Create(ctx, "Ankara'daki kullanıcılara %10 indirim", []string{"sms"}, false)
 	s.SetAudience(ctx, c.ID, cityRule("Ankara"))
 	if _, err := s.GenerateContent(ctx, c.ID, llm.Stream{}); err != nil {

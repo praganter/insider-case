@@ -97,7 +97,7 @@ func TestProviderTimeoutIsRetryable(t *testing.T) {
 
 func TestBackoff(t *testing.T) {
 	// Exponential with +-20% jitter, capped at 32s.
-	for n, base := range map[int]time.Duration{1: time.Second, 2: 2 * time.Second, 3: 4 * time.Second, 5: 16 * time.Second, 6: 32 * time.Second, 40: 32 * time.Second} {
+	for n, base := range map[int]time.Duration{0: time.Second, 1: 2 * time.Second, 2: 4 * time.Second, 4: 16 * time.Second, 5: 32 * time.Second, 40: 32 * time.Second} {
 		for range 50 {
 			d := Backoff(n, errors.New("x"), nil)
 			if d < time.Duration(float64(base)*0.8) || d > time.Duration(float64(base)*1.2) {
@@ -106,7 +106,7 @@ func TestBackoff(t *testing.T) {
 		}
 	}
 	// The provider's Retry-After wins over our own schedule.
-	if d := Backoff(1, fmt.Errorf("wrapped: %w", &SendError{Retryable: true, RetryAfter: 7 * time.Second}), nil); d != 7*time.Second {
+	if d := Backoff(0, fmt.Errorf("wrapped: %w", &SendError{Retryable: true, RetryAfter: 7 * time.Second}), nil); d != 7*time.Second {
 		t.Errorf("Retry-After ignored: %v", d)
 	}
 }
@@ -293,7 +293,7 @@ func TestSendEndToEnd(t *testing.T) {
 	if err != nil || n2 != 24 {
 		t.Fatalf("second send saw %d pending, err=%v", n2, err)
 	}
-	info, err := asynq.NewInspector(redisOpt).GetQueueInfo("default")
+	info, err := asynq.NewInspector(redisOpt).GetQueueInfo("sms")
 	if err != nil || info.Pending != 24 {
 		t.Fatalf("queue holds %d tasks (err=%v), want 24, no duplicates", info.Pending, err)
 	}
@@ -306,6 +306,7 @@ func TestSendEndToEnd(t *testing.T) {
 	h := &Handler{Store: st, Provider: NewProvider(provider.URL), Limiter: &Limiter{Redis: rdb, Rate: 100000, Burst: 100}}
 	srv := asynq.NewServer(redisOpt, asynq.Config{
 		Concurrency:              8,
+		Queues:                   map[string]int{"sms": 1, "email": 1},
 		RetryDelayFunc:           func(int, error, *asynq.Task) time.Duration { return 20 * time.Millisecond },
 		DelayedTaskCheckInterval: 50 * time.Millisecond,
 		TaskCheckInterval:        50 * time.Millisecond,
@@ -369,7 +370,7 @@ func TestSendEndToEnd(t *testing.T) {
 	}
 
 	// Failed messages are archived (the dead letter queue), not lost.
-	archived, err := asynq.NewInspector(redisOpt).ListArchivedTasks("default")
+	archived, err := asynq.NewInspector(redisOpt).ListArchivedTasks("sms")
 	if err != nil || len(archived) != 3 {
 		t.Errorf("archived %d tasks (err=%v), want 3", len(archived), err)
 	}
@@ -396,4 +397,119 @@ func messageID(t *testing.T, pool *pgxpool.Pool, campaignID int64, userID int) i
 		t.Fatal(err)
 	}
 	return id
+}
+
+// Each channel has its own queue, so SMS waiting on its rate limit cannot hold email back.
+func TestEnqueuerUsesOneQueuePerChannel(t *testing.T) {
+	redisClient(t) // empties the test database
+	opt := asynq.RedisClientOpt{Addr: os.Getenv("REDIS_ADDR"), DB: 1}
+	client := asynq.NewClient(opt)
+	defer client.Close()
+	enqueue := NewEnqueuer(client)
+	ctx := context.Background()
+	for _, c := range []struct {
+		id      int64
+		channel string
+	}{{1, "sms"}, {2, "sms"}, {3, "email"}} {
+		if err := enqueue(ctx, c.id, c.channel); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := enqueue(ctx, 1, "sms"); err != nil { // a repeat is a no-op
+		t.Fatal(err)
+	}
+	insp := asynq.NewInspector(opt)
+	for ch, want := range map[string]int{"sms": 2, "email": 1} {
+		info, err := insp.GetQueueInfo(ch)
+		if err != nil || info.Pending != want {
+			t.Errorf("queue %s holds %d tasks (err=%v), want %d", ch, info.Pending, err, want)
+		}
+	}
+}
+
+// oneMessage creates a campaign that is already sending with a single SMS to user 1.
+func oneMessage(t *testing.T, consent bool) (*Handler, *pgxpool.Pool, int64, int64) {
+	t.Helper()
+	ctx := context.Background()
+	dbURL := testdb.New(t)
+	pool, err := pgxpool.New(ctx, dbURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	if err := migrations.Apply(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	st, err := store.New(ctx, dbURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var campaignID, msgID int64
+	for _, q := range []struct {
+		sql  string
+		args []any
+		out  *int64
+	}{
+		{`INSERT INTO users VALUES (1, 'Ali', 'Kaya', 'a@example.com', '+1', 'X', 'tr', 'male', 1990, $1, true, now())`, []any{consent}, nil},
+		{`INSERT INTO campaigns (brief, channels, status, segment_rule) VALUES ('x', '{sms}', 'sending', '{}') RETURNING id`, nil, &campaignID},
+		{`INSERT INTO campaign_contents (campaign_id, channel, body) VALUES ((SELECT max(id) FROM campaigns), 'sms', 'hi {{first_name}}')`, nil, nil},
+		{`INSERT INTO messages (campaign_id, user_id, channel, language) VALUES ((SELECT max(id) FROM campaigns), 1, 'sms', 'tr') RETURNING id`, nil, &msgID},
+	} {
+		if q.out == nil {
+			_, err = pool.Exec(ctx, q.sql, q.args...)
+		} else {
+			err = pool.QueryRow(ctx, q.sql, q.args...).Scan(q.out)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return &Handler{Store: st}, pool, campaignID, msgID
+}
+
+func task(id int64) *asynq.Task {
+	return asynq.NewTask(TaskType, []byte(fmt.Sprintf(`{"message_id":%d}`, id)))
+}
+
+// Consent can be withdrawn between the fan-out and the delivery.
+func TestConsentWithdrawnBeforeDelivery(t *testing.T) {
+	h, pool, campaignID, msgID := oneMessage(t, false)
+	var calls int
+	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		fmt.Fprint(w, `{"id":"p1"}`)
+	}))
+	defer provider.Close()
+	h.Provider = NewProvider(provider.URL)
+
+	err := h.Process(context.Background(), task(msgID))
+	if !errors.Is(err, asynq.SkipRetry) {
+		t.Fatalf("got %v, want a final error", err)
+	}
+	var status, lastErr, campaignStatus string
+	pool.QueryRow(context.Background(), `SELECT status, last_error FROM messages WHERE id = $1`, msgID).Scan(&status, &lastErr)
+	pool.QueryRow(context.Background(), `SELECT status FROM campaigns WHERE id = $1`, campaignID).Scan(&campaignStatus)
+	if calls != 0 || status != "failed" || !strings.Contains(lastErr, "consent") || campaignStatus != "completed" {
+		t.Errorf("provider calls %d, message %s (%s), campaign %s", calls, status, lastErr, campaignStatus)
+	}
+}
+
+// When the last attempt dies of an infrastructure error (here Redis is unreachable), Asynq
+// archives the task, so the row must be marked failed or the campaign would never complete.
+func TestLastAttemptInfrastructureErrorFailsTheMessage(t *testing.T) {
+	h, pool, campaignID, msgID := oneMessage(t, true)
+	h.Provider = NewProvider("http://127.0.0.1:1")
+	h.Limiter = &Limiter{Redis: redis.NewClient(&redis.Options{Addr: "127.0.0.1:1"}), Rate: 100, Burst: 1}
+
+	// Called outside a worker, so Asynq reports no retry budget: this is the last attempt.
+	err := h.Process(context.Background(), task(msgID))
+	if !errors.Is(err, errRecorded) {
+		t.Fatalf("got %v, want the failure to be recorded", err)
+	}
+	var status, lastErr, campaignStatus string
+	pool.QueryRow(context.Background(), `SELECT status, last_error FROM messages WHERE id = $1`, msgID).Scan(&status, &lastErr)
+	pool.QueryRow(context.Background(), `SELECT status FROM campaigns WHERE id = $1`, campaignID).Scan(&campaignStatus)
+	if status != "failed" || !strings.Contains(lastErr, "gave up") || campaignStatus != "completed" {
+		t.Errorf("message %s (%s), campaign %s", status, lastErr, campaignStatus)
+	}
 }

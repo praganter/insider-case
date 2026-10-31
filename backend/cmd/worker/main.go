@@ -37,7 +37,9 @@ func main() {
 		Limiter: &sender.Limiter{Redis: redis.NewClient(&redis.Options{Addr: redisAddr}), Rate: rate, Burst: 1},
 	}
 	srv := asynq.NewServer(asynq.RedisClientOpt{Addr: redisAddr}, asynq.Config{
-		Concurrency:    20,
+		Concurrency: 20,
+		// One queue per channel (see NewEnqueuer); default carries the scheduled campaign tasks.
+		Queues:         map[string]int{"sms": 1, "email": 1, "default": 1},
 		RetryDelayFunc: sender.Backoff,
 	})
 	mux := asynq.NewServeMux()

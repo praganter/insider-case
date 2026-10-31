@@ -22,12 +22,14 @@ const (
 )
 
 // NewEnqueuer returns the function the campaign service calls per message. The
-// task id makes a second enqueue of the same message a no-op.
-func NewEnqueuer(c *asynq.Client) func(ctx context.Context, messageID int64) error {
-	return func(ctx context.Context, messageID int64) error {
+// task id makes a second enqueue of the same message a no-op. Each channel has
+// its own queue, so a backlog of SMS never holds email back behind the SMS rate limit.
+func NewEnqueuer(c *asynq.Client) func(ctx context.Context, messageID int64, channel string) error {
+	return func(ctx context.Context, messageID int64, channel string) error {
 		payload, _ := json.Marshal(map[string]int64{"message_id": messageID})
 		_, err := c.EnqueueContext(ctx, asynq.NewTask(TaskType, payload),
 			asynq.TaskID("message-"+strconv.FormatInt(messageID, 10)),
+			asynq.Queue(channel),
 			asynq.MaxRetry(MaxAttempts-1),
 			asynq.Timeout(30*time.Second))
 		if errors.Is(err, asynq.ErrTaskIDConflict) {
@@ -38,13 +40,13 @@ func NewEnqueuer(c *asynq.Client) func(ctx context.Context, messageID int64) err
 }
 
 // Backoff is the Asynq RetryDelayFunc: exponential with jitter, or the
-// provider's Retry-After when it gave one. n is the number of failures so far.
+// provider's Retry-After when it gave one. n is Asynq's retry count: 0 after the first failure.
 func Backoff(n int, err error, _ *asynq.Task) time.Duration {
 	var se *SendError
 	if errors.As(err, &se) && se.RetryAfter > 0 {
 		return se.RetryAfter
 	}
-	d := time.Second << min(max(n-1, 0), 5) // 1s, 2s, 4s ... capped at 32s
+	d := time.Second << min(max(n, 0), 5) // 1s, 2s, 4s ... capped at 32s
 	return time.Duration(float64(d) * (0.8 + 0.4*rand.Float64()))
 }
 
@@ -54,7 +56,10 @@ type Handler struct {
 	Limiter  *Limiter
 }
 
-func (h *Handler) Process(ctx context.Context, t *asynq.Task) error {
+// errRecorded marks an error whose message row is already marked failed.
+var errRecorded = errors.New("recorded as failed")
+
+func (h *Handler) Process(ctx context.Context, t *asynq.Task) (err error) {
 	var p struct {
 		MessageID int64 `json:"message_id"`
 	}
@@ -62,12 +67,32 @@ func (h *Handler) Process(ctx context.Context, t *asynq.Task) error {
 		return fmt.Errorf("bad payload: %v: %w", err, asynq.SkipRetry)
 	}
 	m, err := h.Store.GetOutgoing(ctx, p.MessageID)
-	if err != nil {
+	if errors.Is(err, store.ErrNotFound) {
 		// The message or its content vanished; nothing a retry can fix.
 		return fmt.Errorf("message %d: %v: %w", p.MessageID, err, asynq.SkipRetry)
 	}
+	if err != nil {
+		// ponytail: if the database stays down through the last attempt the row stays pending; a periodic reconciler would catch that.
+		return err
+	}
 	if m.Status == "sent" || m.Status == "failed" {
 		return nil // a redelivered task for a finished message
+	}
+
+	// Asynq archives the task after the last attempt whatever went wrong. Without this
+	// a Redis or database error there would leave the row pending and the campaign never completes.
+	defer func() {
+		retried, _ := asynq.GetRetryCount(ctx)
+		maxRetry, _ := asynq.GetMaxRetry(ctx)
+		// A cancelled context is a shutdown: Asynq puts the task back instead of counting a failure.
+		if err != nil && ctx.Err() == nil && !errors.Is(err, asynq.SkipRetry) && !errors.Is(err, errRecorded) && retried >= maxRetry {
+			err = h.fail(ctx, m, fmt.Sprintf("gave up after %d attempts: %v", retried+1, err), nil)
+		}
+	}()
+
+	// Consent is checked again here: the person may have withdrawn it since the fan-out.
+	if !m.Consent {
+		return h.fail(ctx, m, "no "+m.Channel+" consent", asynq.SkipRetry)
 	}
 
 	// Per-person check: the approval check used the audience's longest values,
@@ -122,7 +147,7 @@ func (h *Handler) fail(ctx context.Context, m store.Outgoing, reason string, ski
 		return err
 	}
 	if skip == nil {
-		return errors.New(reason)
+		return fmt.Errorf("%s: %w", reason, errRecorded)
 	}
 	return fmt.Errorf("%s: %w", reason, skip)
 }

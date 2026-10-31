@@ -29,8 +29,8 @@ func (e *LimitError) Error() string { return strings.Join(e.Problems, "; ") }
 type Service struct {
 	Store *store.Store
 	LLM   llm.Client
-	// Enqueue hands one message to the queue; it must treat a repeat as a no-op.
-	Enqueue func(ctx context.Context, messageID int64) error
+	// Enqueue hands one message to its channel's queue; it must treat a repeat as a no-op.
+	Enqueue func(ctx context.Context, messageID int64, channel string) error
 	// EnqueueAt asks the queue to call SendDue for the campaign at the given time.
 	EnqueueAt func(ctx context.Context, campaignID int64, at time.Time) error
 }

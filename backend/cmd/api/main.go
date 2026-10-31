@@ -20,7 +20,7 @@ import (
 	"github.com/praganter/insider-case/backend/internal/store"
 )
 
-func newMux(st *store.Store, ai llm.Client, enqueue func(context.Context, int64) error, enqueueAt func(context.Context, int64, time.Time) error) *http.ServeMux {
+func newMux(st *store.Store, ai llm.Client, enqueue func(context.Context, int64, string) error, enqueueAt func(context.Context, int64, time.Time) error) *http.ServeMux {
 	mux := http.NewServeMux()
 	registerCampaigns(mux, &campaign.Service{Store: st, LLM: ai, Enqueue: enqueue, EnqueueAt: enqueueAt})
 	registerMonitor(mux, st)
