@@ -53,9 +53,11 @@ func (a *Anthropic) Audience(ctx context.Context, brief string, previous json.Ra
 		if err != nil {
 			return nil, fmt.Errorf("%w: %v", ErrUnavailable, err)
 		}
-		if text, retry, err := outcome(resp, attempt); !retry {
+		text, retry, err := outcome(resp, attempt)
+		if !retry {
 			return text, err
 		}
+		params.MaxTokens *= 2 // the same request would be cut off again
 	}
 }
 

@@ -115,12 +115,15 @@ func TestAnthropicRefusal(t *testing.T) {
 }
 
 func TestAnthropicMaxTokensRetriesOnce(t *testing.T) {
-	a, _, n := fakeAPI(t, reply{stop: "max_tokens", text: `{"match":"al`}, reply{text: validRule})
+	a, bodies, n := fakeAPI(t, reply{stop: "max_tokens", text: `{"match":"al`}, reply{text: validRule})
 	if _, err := BuildAudience(context.Background(), a, "x"); err != nil {
 		t.Fatalf("second attempt should succeed: %v", err)
 	}
 	if n.Load() != 2 {
 		t.Errorf("want 2 requests, got %d", n.Load())
+	}
+	if !strings.Contains((*bodies)[0], `"max_tokens":2000`) || !strings.Contains((*bodies)[1], `"max_tokens":4000`) {
+		t.Errorf("the retry should double max_tokens:\n%s\n%s", (*bodies)[0], (*bodies)[1])
 	}
 
 	a, _, n = fakeAPI(t, reply{stop: "max_tokens", text: `{"match":"al`})
@@ -254,7 +257,7 @@ func TestAnthropicContentRefusal(t *testing.T) {
 }
 
 func TestAnthropicContentMaxTokensRetriesWithReset(t *testing.T) {
-	a, _, n := fakeAPI(t, reply{stop: "max_tokens", text: `{"messages":[{"chan`}, reply{text: validContent})
+	a, bodies, n := fakeAPI(t, reply{stop: "max_tokens", text: `{"messages":[{"chan`}, reply{text: validContent})
 	var resets int
 	raw, err := a.Content(context.Background(), contentReq(), Stream{Reset: func() { resets++ }})
 	if err != nil || string(raw) != validContent {
@@ -262,6 +265,9 @@ func TestAnthropicContentMaxTokensRetriesWithReset(t *testing.T) {
 	}
 	if n.Load() != 2 || resets != 1 {
 		t.Errorf("requests=%d resets=%d", n.Load(), resets)
+	}
+	if !strings.Contains((*bodies)[0], `"max_tokens":4000`) || !strings.Contains((*bodies)[1], `"max_tokens":8000`) {
+		t.Errorf("the retry should double max_tokens:\n%s\n%s", (*bodies)[0], (*bodies)[1])
 	}
 
 	a, _, _ = fakeAPI(t, reply{stop: "max_tokens", text: `{"messages":[{"chan`})

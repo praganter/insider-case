@@ -48,6 +48,7 @@ func (a *Anthropic) Content(ctx context.Context, req ContentRequest, s Stream) (
 			return text, err
 		}
 		s.reset()
+		params.MaxTokens *= 2 // the same request would be cut off again
 	}
 }
 
