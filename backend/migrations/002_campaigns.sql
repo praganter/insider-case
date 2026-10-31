@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE IF NOT EXISTS campaigns (
     id           bigserial PRIMARY KEY,
     brief        text NOT NULL,

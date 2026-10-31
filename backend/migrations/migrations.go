@@ -1,31 +1,33 @@
-// Package migrations embeds the SQL files and applies them.
+// Package migrations embeds the SQL files and applies the ones not yet recorded.
 package migrations
 
 import (
 	"context"
 	"embed"
-	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
+	"github.com/pressly/goose/v3/lock"
 )
 
 //go:embed *.sql
 var files embed.FS
 
-// Apply runs every file in name order; each statement is idempotent.
+// Apply brings the schema up to date. goose records applied versions in
+// goose_db_version, and the session lock keeps concurrent callers (api, worker,
+// seed) from migrating at the same time.
 func Apply(ctx context.Context, pool *pgxpool.Pool) error {
-	entries, err := files.ReadDir(".")
+	db := stdlib.OpenDBFromPool(pool)
+	defer db.Close()
+	locker, err := lock.NewPostgresSessionLocker()
 	if err != nil {
 		return err
 	}
-	for _, e := range entries {
-		sql, err := files.ReadFile(e.Name())
-		if err != nil {
-			return err
-		}
-		if _, err := pool.Exec(ctx, string(sql)); err != nil {
-			return fmt.Errorf("migration %s: %w", e.Name(), err)
-		}
+	p, err := goose.NewProvider(goose.DialectPostgres, db, files, goose.WithSessionLocker(locker))
+	if err != nil {
+		return err
 	}
-	return nil
+	_, err = p.Up(ctx)
+	return err
 }

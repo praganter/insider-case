@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE IF NOT EXISTS messages (
     id              bigserial PRIMARY KEY,
     campaign_id     bigint NOT NULL REFERENCES campaigns(id),
