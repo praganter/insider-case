@@ -27,6 +27,11 @@ func TestMockBriefs(t *testing.T) {
 			`{"match":"all","conditions":[{"event":"page_view","within_days":30,"exists":true}]}`,
 		},
 		{
+			"upper case matches too",
+			"İSTANBUL SEPET ENGLISH",
+			`{"match":"all","conditions":[{"field":"city","op":"eq","value":"İstanbul"},{"field":"language","op":"eq","value":"en"},{"event":"cart_add","within_days":30,"exists":true}]}`,
+		},
+		{
 			"absurd day count is ignored",
 			"sepet 9999 gün",
 			`{"match":"all","conditions":[{"event":"cart_add","within_days":30,"exists":true}]}`,
