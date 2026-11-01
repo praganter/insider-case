@@ -1,8 +1,8 @@
 # Smart Campaign Composer
 
-**EN:** A marketer writes a campaign brief in plain language. Claude turns it into an audience rule and SMS/email copy, a human reviews and approves, messages go through a queue to a mock provider, and a dashboard shows delivery live. Bonuses: scheduling, A/B test, multi-language copy.
+**EN:** A marketer writes a campaign brief in plain language. Claude turns it into an audience rule and SMS/email copy, a human reviews and approves, messages go through a queue to a mock provider, and a dashboard shows delivery live. Bonuses: scheduling, A/B test, multi-language copy, CI pipeline.
 
-**TR:** Pazarlamacı kampanya brief'ini düz yazıyla yazar. Claude bunu kitle kuralına ve SMS/e-posta metnine çevirir, bir insan inceleyip onaylar, mesajlar kuyruktan sahte bir provider'a gider ve dashboard teslimatı canlı gösterir. Bonuslar: zamanlama, A/B testi, çok dilli metin.
+**TR:** Pazarlamacı kampanya brief'ini düz yazıyla yazar. Claude bunu kitle kuralına ve SMS/e-posta metnine çevirir, bir insan inceleyip onaylar, mesajlar kuyruktan sahte bir provider'a gider ve dashboard teslimatı canlı gösterir. Bonuslar: zamanlama, A/B testi, çok dilli metin, CI pipeline.
 
 ## Run / Çalıştırma
 
@@ -43,8 +43,8 @@ Vue UI (nginx) --> api (HTTP + SSE) --> Postgres
                   llm.Client (Anthropic or mock)
 ```
 
-- **EN:** The API makes two LLM calls through the `llm.Client` interface: first a JSON segment rule (validated by Go, turned into parameterized SQL, never SQL from the LLM), then the streamed copy per channel x variant x language. After approval the API fans messages out (`UNIQUE(campaign_id, user_id, channel)`) into one Asynq queue per channel. The worker sends through a Redis token bucket (100/s per channel), retries with backoff, and a reconciler fails messages whose task was archived. The dashboard follows the campaign over SSE.
-- **TR:** API, `llm.Client` arayüzü üzerinden iki LLM çağrısı yapar: önce JSON segment kuralı (Go doğrular, parametreli SQL'e çevirir; LLM'den SQL gelmez), sonra kanal x varyant x dil başına akan metin. Onaydan sonra API mesajları (`UNIQUE(campaign_id, user_id, channel)`) kanal başına bir Asynq kuyruğuna dağıtır. Worker Redis token bucket'ı (kanal başına 100/sn) üzerinden gönderir, backoff ile tekrar dener; reconciler görevi archive'a düşen mesajları `failed` yapar. Dashboard kampanyayı SSE ile izler.
+- **EN:** The API makes two LLM calls through the `llm.Client` interface: first a JSON segment rule (validated by Go, turned into parameterized SQL, never SQL from the LLM), then the streamed copy per channel x variant x language. After approval the API fans messages out (`UNIQUE(campaign_id, user_id, channel)`) into one Asynq queue per channel. The worker sends through a Redis token bucket (100/s per channel), retries with backoff, and a reconciler settles stuck messages whose task was archived (asking the provider whether it delivered them: `sent` if so, otherwise `failed`). The dashboard follows the campaign over SSE.
+- **TR:** API, `llm.Client` arayüzü üzerinden iki LLM çağrısı yapar: önce JSON segment kuralı (Go doğrular, parametreli SQL'e çevirir; LLM'den SQL gelmez), sonra kanal x varyant x dil başına akan metin. Onaydan sonra API mesajları (`UNIQUE(campaign_id, user_id, channel)`) kanal başına bir Asynq kuyruğuna dağıtır. Worker Redis token bucket'ı (kanal başına 100/sn) üzerinden gönderir, backoff ile tekrar dener; reconciler görevi archive'a düşen takılı mesajları sonuçlandırır (provider'a teslim edip etmediğini sorar: edildiyse `sent`, değilse `failed`). Dashboard kampanyayı SSE ile izler.
 
 API: `POST/GET /campaigns`, `GET /campaigns/{id}`, `PUT /campaigns/{id}/audience`, `POST|PUT /campaigns/{id}/content`, `POST /campaigns/{id}/approve|send|schedule|unschedule`, `GET /campaigns/{id}/events` (SSE), `POST /audience/suggest|preview`, `GET /mode`, `/healthz`, `/metrics`.
 
@@ -93,7 +93,7 @@ Açık onay olmadan hiçbir şey gönderilmez.
 backend/                 Go module / Go modülü
   cmd/api                HTTP API + SSE
   cmd/worker             queue worker, sends messages and starts scheduled campaigns / kuyruk worker'ı, mesajları gönderir, zamanlanmış kampanyaları başlatır
-  cmd/mockprovider       fake SMS/email provider (errors, delays, 429) / sahte SMS/e-posta provider'ı (hata, gecikme, 429)
+  cmd/mockprovider       fake SMS/email provider (errors, delays, 429, delivery lookup) / sahte SMS/e-posta provider'ı (hata, gecikme, 429, teslim sorgusu)
   cmd/seed               migrations + seed data / migration + örnek veri
   internal/segment       audience rule: validator and SQL builder / kitle kuralı: doğrulayıcı ve SQL builder
   internal/llm           Claude client, mock LLM, prompts / Claude istemcisi, mock LLM, prompt'lar
