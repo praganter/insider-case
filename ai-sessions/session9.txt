@@ -1,0 +1,2977 @@
+ ▐▛███▛█   Claude Code v2.1.316
+▝▜██████▀  Opus 5.5 · Claude Pro
+ ▝▝   ▝▝   ~\Desktop\insider-case
+
+  ⎿  SessionStart:clear says: <persisted-output>
+     Output too large (9.9KB). Full output saved to: 
+     ~\.claude\projects\C--Users-<user>-Desktop-insider-case\8983147
+     2-626e-4190-9c1c-d786477c3475\tool-results\hook-67e35bbd-ce0e-4966-9dca-c37
+     b968fd49b-4-systemMessage.txt
+
+     Preview (first 2KB):
+     [insider-case] recent context, 2026-10-31 7:26am GMT+3
+     ────────────────────────────────────────────────────────────
+
+     Legend: session-request | 🔴 bugfix | 🟣 feature | 🔄 refactor | ✅ change 
+     | 🔵 discovery | ⚖️ decision
+
+     Column Key
+       Read: Tokens to read this observation (cost to learn it now)
+       Work: Tokens spent on work that produced this record ( research, 
+     building, deciding)
+
+     Context Index: This semantic index (titles, types, files, tokens) is 
+     usually sufficient to understand past work.
+
+     When you need implementation details, rationale, or debugging context:
+       - Fetch by ID: get_observations([IDs]) for observations visible in this 
+     index
+       - Search history: Use the mem-search skill for past decisions, bugs, and 
+     deeper research
+       - Trust this index over re-reading code for past decisions and learnings
+
+     Context Economics
+       Loading: 50 observations (23,129 tokens to read)
+       Work investment: 170,780 tokens spent on research, building, and 
+     decisions
+       Your savings: 86% reduction from reuse
+
+     Oct 31, 2026
+
+     frontend/src/components/MessageCard.vue
+       #4562  5:53 AM  🔵  MessageCard component implementation and useCampaign
+     composable structure  
+
+     frontend/src/composables/useCampaign.ts
+       #4563           🔵  useCampaign exports closeProgress and uses hash-based
+     routing  
+
+     frontend/package.json
+       #4564           ✅  Added Vue testing dependencies for component tests
+
+     frontend/src/i18n.ts
+       #4565  5:54 AM  🔵  i18n keys for MessageCard validation feedback
+
+     frontend/src/test-setup.ts
+       #4566           🟣  Created test setup file with matchMedia polyfill
+
+     frontend/vite.config.ts
+       #4567           ✅  Configured Vitest to load test setup file
+
+     frontend/src/stream.test.ts
+     ...
+     </persisted-output>
+
+❯ /clear                                                                        
+
+❯ işte şimdi sona geldik. case'in linki ->                                      
+  https://claude.ai/artifact/DPyHGwzK1BLuhAmrPsxFwV. işte proje. Readme ve      
+  decision dosyalarımızı kontrol edelim. düzeltelim eksikleri ekleyelim.        
+  session dosyalarımızı kontrol edelim.                                         
+
+  Searched for 1 pattern, read 2 files, called claude-artifacts 2 times, ran 3 shell commands, recalled 1 memory (ctrl+o to expand)
+
+● README, DECISIONS ve session dosyalarını case metniyle karşılaştırdım. Son
+  birkaç noktayı doğrulayıp planı yazacağım.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● User answered Claude's questions:
+  ⎿  · Case says 'list what you couldn't finish in the README', and the project 
+     rules say the same. But earlier you removed the 'Not finished' section on 
+     purpose. How should the README handle remaining gaps (language value 
+     whitelist, mock LLM ignores age/gender, single-channel /audience/preview 
+     not used by UI)? → Short 'Known limits' (Recommended)
+     · Should ai-sessions/ get a short index (README.md) with one line per 
+     session saying what it covered (skeleton, backend core, UI, bonuses, 
+     hardening…)? → No
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~\.claude\plans\i-te-imdi-sona-geldik-jazzy-cerf.md · /plan 
+     to edit
+     Final docs pass: README, DECISIONS, ai-sessions
+
+     Context
+
+     Case deliverables (artifact): README = setup + short architecture summary,
+     DECISIONS = key decisions + why, ai-sessions = all sanitized exports,
+     unfinished items listed in README. Last commit (2cd91e1: Reconcile, richer
+     /metrics, Sonnet default) made some docs stale. Docs only — no code
+     changes.
+
+     Findings
+
+     - README has setup/tests/flow/structure but no architecture summary;
+       frontend line says src/App.vue, src/lib.ts (now components/,
+       composables/); no endpoint list; mock LLM limits not stated; no
+       known-limits list.
+     - DECISIONS #15 ends with "Known gap… reconciler was left out" — stale,
+       Reconcile now exists (worker, every 30 s, archived sms/email tasks →
+       failed).
+     - DECISIONS lacks: model choice (Sonnet default), age = year - birth_year,
+       duplicate-after-failed-MarkSent relying on provider Idempotency-Key,
+       /metrics + /healthz shape.
+     - docs/plan.md:31 still says default claude-opus-5-5.
+     - ai-sessions 1–8: no emails, local paths or keys. Only hit is "Developed
+       by Batuhan YETGİN" in session6 = the intentional UI credit (also in
+       frontend/src/i18n.ts) → leave it. Pre-commit hook (.githooks/pre-commit →
+       ship-session/scripts/session.py check) already guards new exports.
+
+     Changes (each section EN + TR, match existing terse style)
+
+     README.md
+
+     1. New Architecture / Mimari section after Run: small ASCII diagram
+        Vue (nginx) → api (HTTP+SSE) → Postgres / Redis(Asynq) → worker → 
+        mockprovider, plus 2–3 lines: two LLM calls via llm.Client (Anthropic or
+        mock), rule validated → parameterized SQL, per-channel queues + Redis
+        token bucket, Reconcile, SSE dashboard.
+     2. Short endpoint list (the 16 routes in backend/cmd/api, grouped one line
+        each).
+     3. Fix Structure: frontend/ … (src/components, src/composables, 
+        src/lib.ts).
+     4. Run notes: default model claude-sonnet-5-5; mock LLM understands city,
+        language (English), cart/purchase/page_view and days; age/gender need a
+        real key. Mention mock provider error/delay/429 env knobs (verify names
+        in docker-compose.yml first).
+     5. New Known limits / Bilinen sınırlar (3–4 neutral items): language has no
+        value whitelist (unknown value → empty audience); mock LLM ignores
+        age/gender; POST /audience/preview is single-channel and unused by the
+        UI; backend error messages are English in the Turkish UI. No auth
+        mention.
+
+     docs/DECISIONS.md
+
+     - #6: add one sentence — if the provider call succeeds but MarkSent fails,
+       the retry reuses the same Idempotency-Key, so the provider dedupes.
+     - #15: replace the "Known gap" sentence with Reconcile: every 30 s worker
+       lists archived sms/email tasks and fails their still-pending messages
+       (FailStalled); re-enqueue would be a no-op because Asynq keeps the task
+       id.
+     - New #16 Which model? / Hangi model? — claude-sonnet-5-5 default: fast and
+       cheap enough for interactive streaming, structured output is the same;
+       overridable with CLAUDE_MODEL.
+     - New #17 Observability — /healthz pings DB+Redis; /metrics is hand-written
+       Prometheus text (messages by channel/status, attempts, campaigns by
+       status, queue tasks by state) — no client library needed.
+     - New #18 (or fold into #5) — age = EXTRACT(YEAR FROM now()) - birth_year,
+       may be off by one year; seed stores only birth year to keep it simple.
+
+     docs/plan.md
+
+     - Line 31: claude-opus-5-5 → claude-sonnet-5-5.
+
+     ai-sessions/
+
+     - No edits to sessions 1–8. At the end, user runs /export for this session
+       → ship-session skill as session9 (sanitize + hook check).
+
+     Verification
+
+     - grep -n "reconciler was left out\|opus" README.md docs/ → nothing.
+     - Every README/DECISIONS section has both EN and TR lines.
+     - Re-read routes / env names against backend/cmd/api/*.go and
+       docker-compose.yml while writing.
+     - Leak grep over ai-sessions/ (emails, Users/, sk-ant-) after session9 is
+       added.
+     - No commit/push until the user asks.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Şimdi README'yi düzenliyorum.
+
+● Update(README.md)
+  ⎿  Added 24 lines
+      17  - **EN:** Empty `ANTHROPIC_API_KEY` = rule-based mock LLM (UI s
+          hows a MOCK badge); a key switches to the real model (`CLAUDE_M
+          ODEL`). With a key, API errors are shown with a retry; the app 
+          never falls back to mock silently.
+      18  - **TR:** Boş `ANTHROPIC_API_KEY` = kural tabanlı mock LLM (ara
+          yüzde MOCK rozeti); key varsa gerçek model kullanılır (`CLAUDE_
+          MODEL`). Key varken API hataları tekrar dene seçeneğiyle göster
+          ilir; mock'a sessizce düşülmez.
+      19  
+      20 +- **EN:** Default model is `claude-sonnet-5-5`. The mock LLM un
+         +derstands city, language (English), cart_add / purchase / page_
+         +view and "last N days"; age and gender rules need a real key. T
+         +he mock provider fails 5% and answers 429 for 5% of calls (`PRO
+         +VIDER_ERROR_RATE`, `PROVIDER_TOO_MANY_RATE` in `.env`) so retri
+         +es and the rate limit can be seen working.                     
+      21 +- **TR:** Varsayılan model `claude-sonnet-5-5`. Mock LLM şehir,
+         + dil (İngilizce), cart_add / purchase / page_view ve "son N gün
+         +" ifadelerini anlar; yaş ve cinsiyet kuralları gerçek key ister
+         +. Mock provider çağrıların %5'inde hata, %5'inde 429 döner (`.e
+         +nv` içinde `PROVIDER_ERROR_RATE`, `PROVIDER_TOO_MANY_RATE`); bö
+         +ylece retry ve rate limit çalışırken görülebilir.              
+      22 +                                                               
+      23 +## Architecture / Mimari                                       
+      24 +                                                               
+      25 +```                                                            
+      26 +Vue UI (nginx) --> api (HTTP + SSE) --> Postgres               
+      27 +                       |                   ^                   
+      28 +                       v                   |                   
+      29 +                  Redis (Asynq) --> worker -+--> mockprovider (
+         +SMS / email)                                                   
+      30 +                       ^                                       
+      31 +                  llm.Client (Anthropic or mock)               
+      32 +```                                                            
+      33 +                                                               
+      34 +- **EN:** The API makes two LLM calls through the `llm.Client` 
+         +interface: first a JSON segment rule (validated by Go, turned i
+         +nto parameterized SQL, never SQL from the LLM), then the stream
+         +ed copy per channel x variant x language. After approval the AP
+         +I fans messages out (`UNIQUE(campaign_id, user_id, channel)`) i
+         +nto one Asynq queue per channel. The worker sends through a Red
+         +is token bucket (100/s per channel), retries with backoff, and 
+         +a reconciler fails messages whose task was archived. The dashbo
+         +ard follows the campaign over SSE.                             
+      35 +- **TR:** API, `llm.Client` arayüzü üzerinden iki LLM çağrısı y
+         +apar: önce JSON segment kuralı (Go doğrular, parametreli SQL'e 
+         +çevirir; LLM'den SQL gelmez), sonra kanal x varyant x dil başın
+         +a akan metin. Onaydan sonra API mesajları (`UNIQUE(campaign_id,
+         + user_id, channel)`) kanal başına bir Asynq kuyruğuna dağıtır. 
+         +Worker Redis token bucket'ı (kanal başına 100/sn) üzerinden gön
+         +derir, backoff ile tekrar dener; reconciler görevi archive'a dü
+         +şen mesajları `failed` yapar. Dashboard kampanyayı SSE ile izle
+         +r.                                                             
+      36 +                                                               
+      37 +API: `POST/GET /campaigns`, `GET /campaigns/{id}`, `PUT /campai
+         +gns/{id}/audience`, `POST|PUT /campaigns/{id}/content`, `POST /
+         +campaigns/{id}/approve|send|schedule|unschedule`, `GET /campaig
+         +ns/{id}/events` (SSE), `POST /audience/suggest|preview`, `GET /
+         +mode`, `/healthz`, `/metrics`.                                 
+      38 +                                                               
+      39 +## Known limits / Bilinen sınırlar                             
+      40 +                                                               
+      41 +- **EN:** `language` has no value whitelist (an unknown value g
+         +ives an empty audience). The mock LLM ignores age and gender. `
+         +POST /audience/preview` is single-channel and not used by the U
+         +I. Backend error messages are English in the Turkish UI.       
+      42 +- **TR:** `language` için değer whitelist'i yok (bilinmeyen değ
+         +er boş kitle verir). Mock LLM yaş ve cinsiyeti yok sayar. `POST
+         + /audience/preview` tek kanallıdır ve arayüz kullanmaz. Backend
+         + hata mesajları Türkçe arayüzde İngilizcedir.                  
+      43 +                                                               
+      44  ## Tests / Testler
+      45  
+      46  ```
+
+● Update(README.md)
+  ⎿  Added 1 line, removed 1 line
+      92    internal/testdb        throwaway test databases / tek kullanı
+          mlık test veritabanları
+      93    migrations/            SQL files / SQL dosyaları
+      94    scripts/               test runner used by make test / make t
+          est'in kullandığı betik
+      95 -frontend/                Vue 3 + Vite + TypeScript (src/App.vue
+         -, src/lib.ts)                                                  
+      95 +frontend/                Vue 3 + Vite + TypeScript (src/compone
+         +nts, src/composables, src/lib.ts)                              
+      96  docs/                    plan.md, DECISIONS.md
+      97  ai-sessions/             sanitized Claude session exports / tem
+          izlenmiş Claude oturum kayıtları
+      98  .github/workflows/       CI
+
+● Update(docs\plan.md)
+  ⎿  Added 1 line, removed 1 line
+      28  | D16 | Gerçek Anthropic entegrasyonu key'siz test edilir: `htt
+          ptest` ile sahte Anthropic sunucusu, SDK `option.WithBaseURL` i
+          le ona yönlenir; gerçek API cevap formatları (stream event'leri
+          , refusal, max_tokens, 529) taklit edilir | LLM %25; entegrasyo
+          n kodu key olmadan doğrulanır |
+      29  | D17 | Key varken API hatasında mock'a **düşülmez**; kullanıcı
+          ya hata + tekrar dene | Sahte içerik gerçek gibi onaylanmasın |
+      30  
+      31 -Varsayılanlar: resmi `anthropic-sdk-go`, model `CLAUDE_MODEL` e
+         -nv'den (varsayılan `claude-opus-5-5`); Vue 3 + Vite + TS, UI kü
+         -tüphanesi yok/hafif.                                           
+      31 +Varsayılanlar: resmi `anthropic-sdk-go`, model `CLAUDE_MODEL` e
+         +nv'den (varsayılan `claude-sonnet-5-5`); Vue 3 + Vite + TS, UI 
+         +kütüphanesi yok/hafif.                                         
+      32  Kullanıcının key'i var: geliştirme mock ile, sonda kullanıcı ge
+          rçek key ile kısa manuel deneme yapar (Claude `.env`'i okumaz).
+      33  
+      34  ## LLM hata senaryoları (Claude yoksa / düzgün dönmezse)
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      30  
+      31  ## 6. How do we make sure nobody gets the same message twice? /
+           Aynı kişiye aynı mesaj iki kez gitmesi nasıl engellenir?
+      32  
+      33 -- **EN:** `UNIQUE(campaign_id, user_id, channel)` in Postgres p
+         -lus an idempotency key sent to the provider. The guarantee come
+         -s from the database, so it holds when a worker crashes or a tas
+         -k is enqueued twice.                                           
+      33 +- **EN:** `UNIQUE(campaign_id, user_id, channel)` in Postgres p
+         +lus an idempotency key sent to the provider. The guarantee come
+         +s from the database, so it holds when a worker crashes or a tas
+         +k is enqueued twice. If the provider call succeeds but saving `
+         +sent` fails, the retry reuses the same idempotency key, so the 
+         +provider deduplicates.                                         
+      34  - **TR:** Postgres'te `UNIQUE(campaign_id, user_id, channel)` v
+          e provider'a gönderilen idempotency key. Garanti veritabanından
+           geldiği için worker çökse ya da görev iki kez kuyruğa girse de
+           geçerlidir.
+      35  
+      36  ## 7. How do we handle failures and the 100 msg/s limit? / Hata
+          lar ve saniyede 100 mesaj limiti nasıl yönetilir?
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      31  ## 6. How do we make sure nobody gets the same message twice? /
+           Aynı kişiye aynı mesaj iki kez gitmesi nasıl engellenir?
+      32  
+      33  - **EN:** `UNIQUE(campaign_id, user_id, channel)` in Postgres p
+          lus an idempotency key sent to the provider. The guarantee come
+          s from the database, so it holds when a worker crashes or a tas
+          k is enqueued twice. If the provider call succeeds but saving `
+          sent` fails, the retry reuses the same idempotency key, so the 
+          provider deduplicates.
+      34 -- **TR:** Postgres'te `UNIQUE(campaign_id, user_id, channel)` v
+         -e provider'a gönderilen idempotency key. Garanti veritabanından
+         - geldiği için worker çökse ya da görev iki kez kuyruğa girse de
+         - geçerlidir.                                                   
+      34 +- **TR:** Postgres'te `UNIQUE(campaign_id, user_id, channel)` v
+         +e provider'a gönderilen idempotency key. Garanti veritabanından
+         + geldiği için worker çökse ya da görev iki kez kuyruğa girse de
+         + geçerlidir. Provider çağrısı başarılı olup `sent` kaydı başarı
+         +sız olursa tekrar deneme aynı idempotency key'i kullanır; provi
+         +der tekrarı eler.                                              
+      35  
+      36  ## 7. How do we handle failures and the 100 msg/s limit? / Hata
+          lar ve saniyede 100 mesaj limiti nasıl yönetilir?
+      37  
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      75  
+      76  ## 15. How do the queue and worker stay correct under load and 
+          failure? / Kuyruk ve worker yük ve hata altında nasıl doğru kal
+          ır?
+      77  
+      78 -- **EN:** Each channel has its own Asynq queue (`sms`, `email`)
+         -, so a large SMS backlog waiting on its 100 msg/s token cannot 
+         -hold email back; `default` only carries scheduled-campaign task
+         -s. Consent is checked at fan-out and again just before delivery
+         -, because it can be withdrawn in between: such a message become
+         -s `failed` and the provider is never called. Asynq archives a t
+         -ask after its last attempt whatever the error, so the last atte
+         -mpt of an infrastructure error (Redis, database) also marks the
+         - message `failed`; otherwise it would stay pending and the camp
+         -aign would never complete. A cancelled context (shutdown) is no
+         -t counted as a failure, because Asynq puts that task back. Only
+         - a message that no longer exists skips retries. Backoff is inde
+         -xed by Asynq's retry count, which is 0 after the first failure,
+         - so the waits are 1, 2, 4, 8 seconds. Known gap: if the databas
+         -e is down through the last attempt, the message stays pending; 
+         -a periodic reconciler would fix that and was left out.         
+      78 +- **EN:** Each channel has its own Asynq queue (`sms`, `email`)
+         +, so a large SMS backlog waiting on its 100 msg/s token cannot 
+         +hold email back; `default` only carries scheduled-campaign task
+         +s. Consent is checked at fan-out and again just before delivery
+         +, because it can be withdrawn in between: such a message become
+         +s `failed` and the provider is never called. Asynq archives a t
+         +ask after its last attempt whatever the error, so the last atte
+         +mpt of an infrastructure error (Redis, database) also marks the
+         + message `failed`; otherwise it would stay pending and the camp
+         +aign would never complete. A cancelled context (shutdown) is no
+         +t counted as a failure, because Asynq puts that task back. Only
+         + a message that no longer exists skips retries. Backoff is inde
+         +xed by Asynq's retry count, which is 0 after the first failure,
+         + so the waits are 1, 2, 4, 8 seconds. If the database is down t
+         +hrough the last attempt, a reconciler in the worker (every 30 s
+         +) lists the archived `sms`/`email` tasks and marks their still-
+         +pending messages `failed`; enqueueing again would not help beca
+         +use Asynq keeps an archived task's id.                         
+      79  - **TR:** Her kanalın kendi Asynq kuyruğu vardır (`sms`, `email
+          `); böylece 100 msg/s token'ını bekleyen büyük bir SMS birikimi
+           email'i geride tutamaz. `default` kuyruğu yalnızca zamanlanmış
+           kampanya görevlerini taşır. İzin hem fan-out'ta hem teslimatta
+          n hemen önce kontrol edilir, çünkü arada geri çekilebilir: böyl
+          e bir mesaj `failed` olur ve provider hiç çağrılmaz. Asynq, hat
+          a ne olursa olsun son denemeden sonra görevi archive'a alır; bu
+           yüzden altyapı hatasının (Redis, veritabanı) son denemesi de m
+          esajı `failed` yapar, yoksa mesaj pending kalır ve kampanya hiç
+           tamamlanmaz. İptal edilmiş context (kapanış) başarısızlık sayı
+          lmaz, çünkü Asynq o görevi geri koyar. Yalnızca artık var olmay
+          an mesaj tekrar denenmez. Backoff, Asynq'in ilk hatadan sonra 0
+           olan retry sayacına göre indekslenir; bekleme süreleri 1, 2, 4
+          , 8 saniyedir. Bilinen eksik: veritabanı son denemeye kadar kap
+          alı kalırsa mesaj pending kalır; periyodik bir reconciler bunu 
+          çözer ama eklenmedi.
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 16 lines, removed 1 line
+      76  ## 15. How do the queue and worker stay correct under load and 
+          failure? / Kuyruk ve worker yük ve hata altında nasıl doğru kal
+          ır?
+      77  
+      78  - **EN:** Each channel has its own Asynq queue (`sms`, `email`)
+          , so a large SMS backlog waiting on its 100 msg/s token cannot 
+          hold email back; `default` only carries scheduled-campaign task
+          s. Consent is checked at fan-out and again just before delivery
+          , because it can be withdrawn in between: such a message become
+          s `failed` and the provider is never called. Asynq archives a t
+          ask after its last attempt whatever the error, so the last atte
+          mpt of an infrastructure error (Redis, database) also marks the
+           message `failed`; otherwise it would stay pending and the camp
+          aign would never complete. A cancelled context (shutdown) is no
+          t counted as a failure, because Asynq puts that task back. Only
+           a message that no longer exists skips retries. Backoff is inde
+          xed by Asynq's retry count, which is 0 after the first failure,
+           so the waits are 1, 2, 4, 8 seconds. If the database is down t
+          hrough the last attempt, a reconciler in the worker (every 30 s
+          ) lists the archived `sms`/`email` tasks and marks their still-
+          pending messages `failed`; enqueueing again would not help beca
+          use Asynq keeps an archived task's id.
+      79 -- **TR:** Her kanalın kendi Asynq kuyruğu vardır (`sms`, `email
+         -`); böylece 100 msg/s token'ını bekleyen büyük bir SMS birikimi
+         - email'i geride tutamaz. `default` kuyruğu yalnızca zamanlanmış
+         - kampanya görevlerini taşır. İzin hem fan-out'ta hem teslimatta
+         -n hemen önce kontrol edilir, çünkü arada geri çekilebilir: böyl
+         -e bir mesaj `failed` olur ve provider hiç çağrılmaz. Asynq, hat
+         -a ne olursa olsun son denemeden sonra görevi archive'a alır; bu
+         - yüzden altyapı hatasının (Redis, veritabanı) son denemesi de m
+         -esajı `failed` yapar, yoksa mesaj pending kalır ve kampanya hiç
+         - tamamlanmaz. İptal edilmiş context (kapanış) başarısızlık sayı
+         -lmaz, çünkü Asynq o görevi geri koyar. Yalnızca artık var olmay
+         -an mesaj tekrar denenmez. Backoff, Asynq'in ilk hatadan sonra 0
+         - olan retry sayacına göre indekslenir; bekleme süreleri 1, 2, 4
+         -, 8 saniyedir. Bilinen eksik: veritabanı son denemeye kadar kap
+         -alı kalırsa mesaj pending kalır; periyodik bir reconciler bunu 
+         -çözer ama eklenmedi.                                           
+      79 +- **TR:** Her kanalın kendi Asynq kuyruğu vardır (`sms`, `email
+         +`); böylece 100 msg/s token'ını bekleyen büyük bir SMS birikimi
+         + email'i geride tutamaz. `default` kuyruğu yalnızca zamanlanmış
+         + kampanya görevlerini taşır. İzin hem fan-out'ta hem teslimatta
+         +n hemen önce kontrol edilir, çünkü arada geri çekilebilir: böyl
+         +e bir mesaj `failed` olur ve provider hiç çağrılmaz. Asynq, hat
+         +a ne olursa olsun son denemeden sonra görevi archive'a alır; bu
+         + yüzden altyapı hatasının (Redis, veritabanı) son denemesi de m
+         +esajı `failed` yapar, yoksa mesaj pending kalır ve kampanya hiç
+         + tamamlanmaz. İptal edilmiş context (kapanış) başarısızlık sayı
+         +lmaz, çünkü Asynq o görevi geri koyar. Yalnızca artık var olmay
+         +an mesaj tekrar denenmez. Backoff, Asynq'in ilk hatadan sonra 0
+         + olan retry sayacına göre indekslenir; bekleme süreleri 1, 2, 4
+         +, 8 saniyedir. Veritabanı son denemeye kadar kapalı kalırsa wor
+         +ker'daki reconciler (30 sn'de bir) `sms`/`email` archive'ındaki
+         + görevleri listeler ve hâlâ pending olan mesajları `failed` yap
+         +ar; yeniden kuyruğa atmak işe yaramaz, çünkü Asynq archive'daki
+         + görevin id'sini tutar.                                        
+      80 +                                                               
+      81 +## 16. Which model? / Hangi model?                             
+      82 +                                                               
+      83 +- **EN:** `claude-sonnet-5-5` by default: fast and cheap enough
+         + for interactive streaming, and structured output works the sam
+         +e as on larger models. `CLAUDE_MODEL` overrides it.            
+      84 +- **TR:** Varsayılan `claude-sonnet-5-5`: etkileşimli stream iç
+         +in yeterince hızlı ve ucuz, yapılandırılmış çıktı büyük modelle
+         +rle aynı çalışır. `CLAUDE_MODEL` ile değiştirilir.             
+      85 +                                                               
+      86 +## 17. How is the system monitored? / Sistem nasıl izlenir?    
+      87 +                                                               
+      88 +- **EN:** `/healthz` pings Postgres and Redis. `/metrics` is ha
+         +nd-written Prometheus text (messages by channel and status, pro
+         +vider attempts, campaigns by status, queue tasks by state), so 
+         +no client library is needed. The dashboard itself uses SSE.    
+      89 +- **TR:** `/healthz` Postgres ve Redis'e ping atar. `/metrics` 
+         +elle yazılmış Prometheus metnidir (kanal ve duruma göre mesajla
+         +r, provider denemeleri, duruma göre kampanyalar, duruma göre ku
+         +yruk görevleri); ek kütüphane gerekmez. Dashboard'un kendisi SS
+         +E kullanır.                                                    
+      90 +                                                               
+      91 +## 18. How is age computed? / Yaş nasıl hesaplanır?            
+      92 +                                                               
+      93 +- **EN:** The seed stores only `birth_year`, and age is `curren
+         +t year - birth_year`, so it can be off by one year. That is acc
+         +urate enough for audience rules like "under 30" and avoids stor
+         +ing exact birth dates.                                         
+      94 +- **TR:** Seed yalnızca `birth_year` tutar; yaş `bu yıl - birth
+         +_year`'dır, bu yüzden bir yıl sapabilir. "30 yaş altı" gibi kit
+         +le kuralları için yeterince doğrudur ve tam doğum tarihi saklam
+         +ayı önler.                                                     
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Dokümanları güncelledim, henüz commit etmedim.
+
+  README.md
+  - Bir Mimari bölümü ekledim: ASCII diyagram, EN/TR özet ve endpoint listesi.
+  - Varsayılan modeli (Sonnet) ve mock LLM'in neyi anladığını yazdım. Yaş ve
+    cinsiyet için gerçek key gerekiyor.
+  - Mock provider'ın hata ve 429 oranı ayarlarını belirttim
+    (PROVIDER_ERROR_RATE, PROVIDER_TOO_MANY_RATE).
+  - "Bilinen sınırlar" bölümünü ekledim. Şunları söylüyor: language için
+    whitelist yok, mock LLM yaş ve cinsiyeti yok sayıyor, /audience/preview
+    arayüzde kullanılmıyor, backend hata mesajları Türkçe arayüzde İngilizce.
+  - Yapı listesindeki frontend satırını components ve composables klasörlerine
+    göre düzelttim.
+
+  docs/DECISIONS.md
+  - #6: sent kaydı başarısız olursa tekrar denemenin aynı idempotency key'i
+    kullanacağını ekledim.
+  - #15: eski "reconciler eklenmedi" notunu, reconciler'ın şimdiki çalışma
+    şekliyle değiştirdim.
+  - Yeni #16 model seçimi, #17 izleme (/healthz, /metrics), #18 yaş hesabı.
+
+  docs/plan.md: varsayılan model Sonnet olarak güncellendi.
+
+  ai-sessions (1–8): Hiçbirinde e-posta, yerel yol veya API key yok. Tek eşleşme
+  session6'daki "Developed by Batuhan YETGİN". Bu, arayüzdeki bilinçli imza
+  metni, o yüzden dokunmadım.
+
+  Bilmen gerekenler
+  - Case metni "tüm session'ların export'u" diyor. Bu konuşmayı da eklemek
+    istersen /export yap, sonra /ship-session 09-docs çalıştır. Hook sızıntı
+    kontrolünü zaten yapıyor.
+  - Hiçbir şeyi çalıştırıp doğrulamadım. Yeni #17'deki /metrics açıklamasını
+    koddan okuyarak yazdım.
+  - Commit ister misin? Mesaj olarak "Update README and decisions for final
+    state" öneririm.
+
+✻ Cogitated for 2m 45s · done Saturday 7:42 AM
+
+※ recap: Goal: finalize the Insider case submission. I updated README, DECISIONS and plan.md (architecture, known limits, new decisions, Sonnet default); sessions 1–8 are clean. Next: you decide whether I commit these docs, and export this session as session9.
+
+❯ sana case studynin olduğu claude.ai arfact'ı atmıştım değil mi ?              
+
+● Evet, attın. claude.ai/artifact/DPyHGwzK1BLuhAmrPsxFwV linkini açıp okudum.
+  Başlığı "Smart Campaign Composer Case (Copy)" olarak çıktı ve içinde şunlar
+  vardı:
+
+  - fonksiyonel ve AI gereksinimleri
+  - teslim edilecekler listesi
+  - bonus maddeleri
+  - değerlendirme ağırlıkları
+
+  README, DECISIONS ve ai-sessions için yaptığım kontrolü bu listeye göre
+  yaptım. Örneğin "yetiştiremediklerini README'de belirt" maddesi yüzünden
+  "Bilinen sınırlar" bölümünü ekledim.
+✻ Baked for 7s · done Saturday 10:18 PM
+
+❯ tamam şimdi tekrar değerlendiren konumunda projeyi incele ve değerlendirme    
+  koşullarına göre puan ver.                                                    
+
+● Değerlendirmeyi koda bakarak yapacağım. Önce test kapsamını ve LLM katmanını
+  kontrol ediyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Bu değerlendirmeyi kodu okuyup test fonksiyonlarını sayarak yaptım. Uygulamayı
+  ve testleri çalıştırmadım, bu yüzden puanlar "çalışıyor" varsayımına
+  dayanıyor.
+
+  ┌───────────────────────┬─────────┬──────┐
+  │        Kriter         │ Ağırlık │ Puan │
+  ├───────────────────────┼─────────┼──────┤
+  │ LLM entegrasyonu      │ 25      │ 22   │
+  ├───────────────────────┼─────────┼──────┤
+  │ Mimari ve kararlar    │ 20      │ 18   │
+  ├───────────────────────┼─────────┼──────┤
+  │ Backend güvenilirliği │ 20      │ 17   │
+  ├───────────────────────┼─────────┼──────┤
+  │ Frontend              │ 20      │ 16   │
+  ├───────────────────────┼─────────┼──────┤
+  │ Test ve kod kalitesi  │ 15      │ 13   │
+  ├───────────────────────┼─────────┼──────┤
+  │ Toplam                │ 100     │ 86   │
+  └───────────────────────┴─────────┴──────┘
+
+  LLM entegrasyonu (22/25)
+  - Güçlü yanlar:
+    - JSON şemalı çıktı kullanılıyor.
+    - Go tarafı whitelist'e göre doğruluyor ve hata durumunda bir düzeltme turu
+      var.
+    - Refusal ve max_tokens başarısızlık sayılıyor.
+    - Key yokken mock modu açık bir rozetle çalışıyor. Key varken sessizce
+      mock'a düşülmüyor.
+    - Gerçek istemci sahte HTTP sunucusuna karşı test ediliyor.
+    - internal/llm altında 30 test var.
+  - Eksikler:
+    - Gerçek bir key ile hiç çalıştırılmadı. En iddialı kısım canlıda
+      doğrulanmadı.
+    - Mock LLM yaş ve cinsiyet kurallarını anlamıyor.
+
+  Mimari ve kararlar (18/20)
+  - DECISIONS'ta 18 madde var, hepsi "problem, karar, neden" biçiminde ve EN/TR.
+  - Reddedilen alternatifler ve bilinçli ödünler (GSM-7, down migration yok)
+    açıkça yazılmış.
+  - README'deki mimari özet artık diyagramlı.
+  - Eksik: Kararların çoğu "ne yaptık" odaklı. Alternatiflerin karşılaştırması
+    sınırlı.
+
+  Backend güvenilirliği (17/20)
+  - Güçlü yanlar:
+    - UNIQUE kısıtı ve idempotency key birlikte çalışıyor.
+    - Her kanalın kendi kuyruğu ve Redis token bucket'ı var.
+    - İzin hem fan-out'ta hem gönderimden hemen önce kontrol ediliyor.
+    - Son denemede mesaj failed oluyor ve takılan mesajlar için reconciler var.
+    - Backoff'u ve Retry-After'ı ayrı ayrı düşünmüşsün.
+  - Eksikler:
+    - Reconciler her turda tüm archive'ı tarıyor. Küçük ölçekte sorun değil.
+    - MarkSent hatasında çift gönderim tamamen provider'ın idempotency'sine
+      kalıyor.
+    - language alanı için whitelist yok.
+
+  Frontend (16/20)
+  - Bileşenler ayrılmış, SSE ile canlı dashboard var. TR/EN, açık/koyu tema,
+    karakter sayaçları, kampanya listesi ve zamanlama var.
+  - Eksikler:
+    - EN dili, zamanlanmış durum kartı ve tam bir oluşturma akışı gerçek LLM ile
+      tarayıcıda hiç denenmedi.
+    - Tablonun mobil genişliği ve hash yönlendirme mantığının testi yok.
+    - Bunlar canlıda göze çarpabilecek yerler.
+
+  Test ve kod kalitesi (13/15)
+  - Backend'de yaklaşık 89 test fonksiyonu var: 3272 satır kod, 2489 satır test.
+    CI'da -race, golangci-lint, govulncheck ve go mod tidy kontrolü çalışıyor.
+  - Frontend'de vitest testleri var.
+  - Eksik: uçtan uca test yok. make test ve CI'ın yeşil olduğunu bu oturumda
+    görmedim.
+
+  Teslim edilenler
+  - docker compose up, make test, README, DECISIONS ve ai-sessions/ hepsi
+    mevcut.
+  - Bonuslardan dördü de yapılmış: zamanlama, A/B, çok dilli içerik, CI.
+  - Eksik olabilecek tek şey bu oturumun export'u (session9).
+
+  Puanı en çok yükseltecek işler
+  1. Gerçek key ile bir tam akış çalıştırıp (brief, kitle, metin, onay,
+     gönderim) sonucu not etmek. LLM puanını ve güveni artırır.
+  2. Temiz klonda docker compose up --build ve make test denemek. Teslimin en
+     riskli noktası bu.
+  3. EN dilinde ve zamanlanmış durumda arayüzü gözle kontrol etmek.
+
+✻ Baked for 27s · done Saturday 10:19 PM
+
+※ recap: Goal: finalize the Insider case submission. I updated README, DECISIONS and plan.md (uncommitted) and scored the project about 86/100 as a grader. Next: you run a clean-clone `docker compose up` and `make test`, then tell me whether to commit.
+
+❯ 1- mock llm yaş ve cinsiyeti  de anlasın madem ekleyelim onu. Ardından readme 
+  tarfına örnek 5er tane cümle ekleyelim farklı kitleleri bulan. bir tanesi     
+  case de verilen örnek olsun diğerlerinde ara ara yaş ve cinsiyet kullan       
+  çeşitlendir.2- miraride alternatifleri ben bilerek yazmadım. 3- reconciler    
+  optimize edelim sadece pending olan bakması gereken kayıtlara baksın. 4-      
+  marksent çift gönderim hatası için provider zaten mesajıdsi alıp doğrulama    
+  yapmıyor mu ? yetmez mi nasıl geliştirebiliriz ? 5- language için whitelist   
+  oluştur. 6- frontend tarafında mobil kısmı zaten kapsam dışı bıraktık         
+  bilinçli karar bu isterlerde görülmedi gerek de görülmedi. 7- merak ediyorsun 
+  madem uçtan uca testi yap ben bunları commit push ettirdikten sonra da CI'ın  
+  yeşil olduğunu gör :) 8-oturumu her iş bütünce export ediyorum takılma.       
+
+  Searched for 2 patterns, read 5 files, ran 2 shell commands (ctrl+o to expand)
+
+● Kodu okudum. Son olarak reconciler'ın updated_at alanına dayanabilmesi için
+  durum güncellemelerini ve e2e için API gövdelerini kontrol ediyorum.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Updated plan
+  ⎿  /plan to preview
+  ⎿  User rejected Claude's plan:
+     ╭─────────────────────────────────────────────────────────────────────────╮
+     │ Close the evaluation gaps: mock age/gender, language whitelist, cheaper │
+     │ reconciler, E2E                                                         │
+     │                                                                         │
+     │ Context                                                                 │
+     │                                                                         │
+     │ The self-evaluation left a few gaps. The user picked these: the mock    │
+     │ LLM should understand age and gender, the README should get example     │
+     │ briefs, language needs a whitelist, the reconciler should look only at  │
+     │ open messages, and the MarkSent duplicate question needs an answer.     │
+     │ After that comes an end-to-end run, then (only when the user asks)      │
+     │ commit, push, and a green CI check. Out of scope by the user's choice:  │
+     │ alternatives in DECISIONS, mobile UI, session exports.                  │
+     │                                                                         │
+     │ 1. Mock LLM: age and gender — backend/internal/llm/mock.go              │
+     │                                                                         │
+     │ Match on the folded brief (reuse norm), as the existing city, language  │
+     │ and event rules do:                                                     │
+     │ - Gender: \bkadin, \bbayan, \b(women|woman|female|ladies)\b → gender eq │
+     │   female; \berkek, \b(men|man|male)\b → male. If both match, add        │
+     │   nothing (ambiguous).                                                  │
+     │ - Age (always needs an age word, so "%30" or "over 30 days" never       │
+     │   match):                                                               │
+     │   - Range: X-Y yaş, X ile Y yaş (arası), aged X-Y / X to Y years old →  │
+     │     age gte X + age lte Y.                                              │
+     │   - Minimum: X yaş üstü/üzeri, over X years old, X+ years old → gte X.  │
+     │   - Maximum: X yaş altı, under X years old → lt X.                      │
+     │ - Conditions go after city/language, before events (deterministic order │
+     │   for the test strings).                                                │
+     │ - Tests in llm_test.go TestMockBriefs: one row per form (TR range, TR   │
+     │   min + gender, EN max + gender, both genders → no gender, "%30         │
+     │   indirim" → no age). Add an age+gender brief to                        │
+     │   TestMockOutputAlwaysValid.                                            │
+     │                                                                         │
+     │ 2. Language whitelist — backend/internal/segment/segment.go             │
+     │                                                                         │
+     │ - allowedValues gets "language": {"tr", "en"} (matches seed             │
+     │   cmd/seed/data.go:37 and the content prompt). The existing check in    │
+     │   field() then covers eq and in.                                        │
+     │ - internal/llm/anthropic.go:96: build the hardcoded "tr" or "en" from   │
+     │   segment.Values("language"), the same way gender is built.             │
+     │ - New migrations/005_language_check.sql (goose): CHECK (language IN     │
+     │   ('tr','en')) on users, idempotent (drop if exists → add). This        │
+     │   mirrors the gender CHECK in 001_init.sql. In the same file, add the   │
+     │   partial index for item 3.                                             │
+     │ - Test: a TestBuildInvalid row for language eq "de".                    │
+     │                                                                         │
+     │ 3. Reconciler looks only at open messages —                             │
+     │ internal/sender/reconcile.go, internal/store/messages.go                │
+     │                                                                         │
+     │ - New store query OpenMessages(ctx, olderThan, limit): SELECT id,       │
+     │   channel FROM messages WHERE status IN ('pending','retrying') AND      │
+     │   updated_at < now() - $1 ORDER BY id LIMIT $2, returning the existing  │
+     │   []Pending. Every status change bumps updated_at (verified), so "older │
+     │   than 1 min" skips messages that are being worked on right now.        │
+     │ - Partial index in migration 005: CREATE INDEX IF NOT EXISTS            │
+     │   messages_open ON messages (id) WHERE status IN                        │
+     │   ('pending','retrying').                                               │
+     │ - Reconcile: for each open message, insp.GetTaskInfo(channel,           │
+     │   "message-<id>"). Only TaskStateArchived gets collected; not-found and │
+     │   other states are left alone. Then the existing FailStalled(ids). Up   │
+     │   to 500 per tick, and the paging over the archive goes away. The cost  │
+     │   now scales with stuck open messages, not with archive size. Update    │
+     │   the ponytail: note.                                                   │
+     │ - Fix the stale ponytail comment at handler.go:75: it now points to     │
+     │   Reconcile.                                                            │
+     │ - Test TestReconcileFailsOnlyArchivedMessages: set updated_at = now() - │
+     │   interval '1 hour' before reconciling, and keep the same assertions.   │
+     │   Add one case where a fresh open message whose task is archived is     │
+     │   left alone until it ages.                                             │
+     │                                                                         │
+     │ 4. MarkSent duplicate — answer, no code change                          │
+     │                                                                         │
+     │ The provider already dedupes. The retry sends the same Idempotency-Key: │
+     │ message-<id> and the mock provider returns the original id without      │
+     │ delivering again (cmd/mockprovider/main.go:74). That is enough to       │
+     │ prevent a duplicate. Two remaining edges, written into DECISIONS #6:    │
+     │ - (a) The mock provider keeps keys in memory, so a restart forgets      │
+     │   them. Real providers keep them for about 24 h.                        │
+     │ - (b) If MarkSent fails through the last attempt, the message ends up   │
+     │   failed although it was delivered. That is a wrong status, not a       │
+     │   duplicate.                                                            │
+     │                                                                         │
+     │ 5. Docs                                                                 │
+     │                                                                         │
+     │ - README: new Example briefs / Örnek brief'ler section with 5 briefs    │
+     │   that work in mock mode. Seed ages are 19–71.                          │
+     │   a. Case brief verbatim: "Son 30 günde sepetine ürün ekleyip alışveriş │
+     │      yapmayan İstanbul'daki kullanıcılara %30 indirim hatırlatması      │
+     │      gönder. Samimi ama kısa olsun."                                    │
+     │   b. "Ankara'daki 25 yaş altı kadınlara yeni sezon ürünlerini duyur."   │
+     │   c. "Son 7 günde alışveriş yapan İzmir'deki erkeklere teşekkür mesajı  │
+     │      gönder."                                                           │
+     │   d. "Son 14 günde siteyi ziyaret eden 18-24 yaş arası kullanıcılara    │
+     │      öğrenci indirimi duyur." (if "ziyaret" does not map to page_view   │
+     │      in the mock, use a different wording; the fallback is page_view    │
+     │      anyway)                                                            │
+     │   e. "Thank English-speaking women over 40 years old who made a         │
+     │      purchase in the last 60 days."                                     │
+     │ - README: drop "mock ignores age/gender" and the language whitelist     │
+     │   item from Known limits. Update the mock description line (EN + TR).   │
+     │ - DECISIONS #6 (edges a and b), #15 (reconciler now scans open          │
+     │   messages, not the archive).                                           │
+     │                                                                         │
+     │ 6. Verification (E2E)                                                   │
+     │                                                                         │
+     │ 1. Tests: docker compose run --rm --build test and docker compose run   │
+     │    --rm --build test-frontend must both pass.                           │
+     │ 2. Stack: docker compose down -v && docker compose up --build -d. The   │
+     │    -v is needed for the new CHECK on fresh seed data; it only resets    │
+     │    local dev data. /healthz, /mode = mock.                              │
+     │ 3. API flow with curl, once per example brief: POST /campaigns →        │
+     │    /audience/suggest (count > 0, rule shows age/gender) → content →     │
+     │    approve → send → poll GET /campaigns/{id} until completed. Check     │
+     │    /metrics for sent, failed, and attempts > messages (retries from 5%  │
+     │    errors and 5% 429s).                                                 │
+     │ 4. Browser (Claude in Chrome): one brief through the UI (compose →      │
+     │    approve → live dashboard to completion), TR and EN.                  │
+     │ 5. After the user asks for it: commit (small focused commits), push, gh │
+     │    run watch until CI is green.                                         │
+     ╰─────────────────────────────────────────────────────────────────────────╯
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Updated plan
+  ⎿  Error editing file
+
+● Updated plan
+  ⎿  Error editing file
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~\.claude\plans\i-te-imdi-sona-geldik-jazzy-cerf.md · /plan 
+     to edit
+     Close the evaluation gaps: mock age/gender, language whitelist, cheaper 
+     reconciler, E2E
+
+     Context
+
+     The self-evaluation left a few gaps. The user picked these: the mock LLM
+     should understand age and gender, the README should get example briefs,
+     language needs a whitelist, the reconciler should look only at open
+     messages, and the MarkSent duplicate question needs an answer. After that
+     comes an end-to-end run, then (only when the user asks) commit, push, and a
+     green CI check. Out of scope by the user's choice: alternatives in
+     DECISIONS, mobile UI, session exports.
+
+     1. Mock LLM: age and gender — backend/internal/llm/mock.go
+
+     Match on the folded brief (reuse norm), as the existing city, language and
+     event rules do:
+     - Gender: \bkadin, \bbayan, \b(women|woman|female|ladies)\b → gender eq 
+       female; \berkek, \b(men|man|male)\b → male. If both match, add nothing
+       (ambiguous).
+     - Age (always needs an age word, so "%30" or "over 30 days" never match):
+       - Range: X-Y yaş, X ile Y yaş (arası), aged X-Y / X to Y years old → age 
+         gte X + age lte Y.
+       - Minimum: X yaş üstü/üzeri, over X years old, X+ years old → gte X.
+       - Maximum: X yaş altı, under X years old → lt X.
+     - Conditions go after city/language, before events (deterministic order for
+       the test strings).
+     - Tests in llm_test.go TestMockBriefs: one row per form (TR range, TR min +
+       gender, EN max + gender, both genders → no gender, "%30 indirim" → no
+       age). Add an age+gender brief to TestMockOutputAlwaysValid.
+
+     2. Language whitelist — backend/internal/segment/segment.go
+
+     - allowedValues gets "language": {"tr", "en"} (matches seed
+       cmd/seed/data.go:37 and the content prompt). The existing check in
+       field() then covers eq and in.
+     - internal/llm/anthropic.go:96: build the hardcoded "tr" or "en" from
+       segment.Values("language"), the same way gender is built.
+     - New migrations/005_language_check.sql (goose): CHECK (language IN 
+       ('tr','en')) on users, idempotent (drop if exists → add). This mirrors
+       the gender CHECK in 001_init.sql. In the same file, add the partial index
+       for item 3.
+     - Test: a TestBuildInvalid row for language eq "de".
+
+     3. Reconciler looks only at open messages — internal/sender/reconcile.go, 
+     internal/store/messages.go
+
+     - New store query OpenMessages(ctx, olderThan, limit): SELECT id, channel 
+       FROM messages WHERE status IN ('pending','retrying') AND updated_at < 
+       now() - $1 ORDER BY id LIMIT $2, returning the existing []Pending. Every
+       status change bumps updated_at (verified), so "older than 1 min" skips
+       messages that are being worked on right now.
+     - Partial index in migration 005: CREATE INDEX IF NOT EXISTS messages_open 
+       ON messages (id) WHERE status IN ('pending','retrying').
+     - Reconcile: for each open message, insp.GetTaskInfo(channel, 
+       "message-<id>"). Only TaskStateArchived gets collected; not-found and
+       other states are left alone. Then the existing FailStalled(ids). Up to
+       500 per tick, and the paging over the archive goes away. The cost now
+       scales with stuck open messages, not with archive size. Update the
+       ponytail: note.
+     - Fix the stale ponytail comment at handler.go:75: it now points to
+       Reconcile.
+     - Test TestReconcileFailsOnlyArchivedMessages: set updated_at = now() - 
+       interval '1 hour' before reconciling, and keep the same assertions. Add
+       one case where a fresh open message whose task is archived is left alone
+       until it ages.
+
+     4. MarkSent duplicate — answer, no code change
+
+     The provider already dedupes. The retry sends the same Idempotency-Key: 
+     message-<id> and the mock provider returns the original id without
+     delivering again (cmd/mockprovider/main.go:74). That is enough to prevent a
+     duplicate. Two remaining edges, written into DECISIONS #6:
+     - (a) The mock provider keeps keys in memory, so a restart forgets them.
+       Real providers keep them for about 24 h.
+     - (b) If MarkSent fails through the last attempt, the message ends up
+       failed although it was delivered. That is a wrong status, not a
+       duplicate.
+
+     5. Docs
+
+     - README: new Example briefs / Örnek brief'ler section with 5 briefs that
+       work in mock mode. Seed ages are 19–71.
+       a. Case brief verbatim: "Son 30 günde sepetine ürün ekleyip alışveriş
+          yapmayan İstanbul'daki kullanıcılara %30 indirim hatırlatması gönder.
+          Samimi ama kısa olsun."
+       b. "Ankara'daki 25 yaş altı kadınlara yeni sezon ürünlerini duyur."
+       c. "Son 7 günde alışveriş yapan İzmir'deki erkeklere teşekkür mesajı
+          gönder."
+       d. "Son 14 günde siteyi ziyaret eden 18-24 yaş arası kullanıcılara
+          öğrenci indirimi duyur." (if "ziyaret" does not map to page_view in
+          the mock, use a different wording; the fallback is page_view anyway)
+       e. "Thank English-speaking women over 40 years old who made a purchase in
+          the last 60 days."
+     - README: drop "mock ignores age/gender" and the language whitelist item
+       from Known limits. Update the mock description line (EN + TR).
+     - DECISIONS #6 (edges a and b), #15 (reconciler now scans open messages,
+       not the archive).
+
+     6. Verification (E2E)
+
+     1. Tests: docker compose run --rm --build test and docker compose run --rm 
+        --build test-frontend must both pass.
+     2. Stack: docker compose down -v && docker compose up --build -d. The -v is
+        needed for the new CHECK on fresh seed data; it only resets local dev
+        data. /healthz, /mode = mock.
+     3. API flow with curl, once per example brief: POST /campaigns →
+        /audience/suggest (count > 0, rule shows age/gender) → content → approve
+        → send → poll GET /campaigns/{id} until completed. Check /metrics for
+        sent, failed, and attempts > messages (retries from 5% errors and 5%
+        429s).
+     4. Browser (Claude in Chrome): one brief through the UI (compose → approve
+        → live dashboard to completion), TR and EN.
+     5. After the user asks for it: commit (small focused commits), push, gh run
+        watch until CI is green.
+
+● Madde 4 onaylanan planda hâlâ "kod değişikliği yok" yazıyor; bu düzenleme
+  tutmadığı için reddetme notundaki talimatı izleyip idempotency key ile
+  sorgulanan bir GET endpoint'i ekleyeceğim. Önce language whitelist, migration
+  ve prompt gibi küçük işlerle başlıyorum. · summary
+
+● Update(backend\internal\segment\segment.go)
+  ⎿  Added 1 line, removed 1 line
+      61  
+      62  // Text fields whose values are a closed set; anything else wou
+          ld match nobody
+      63  // without saying so (for example "erkek" instead of "male").
+      64 -var allowedValues = map[string][]string{"gender": {"male", "fem
+         -ale"}}                                                         
+      64 +var allowedValues = map[string][]string{"gender": {"male", "fem
+         +ale"}, "language": {"tr", "en"}}                               
+      65  
+      66  // Values returns the allowed values of a field, or nil when an
+          y text is fine.
+      67  func Values(field string) []string { return allowedValues[field
+          ] }
+
+● Update(backend\internal\llm\anthropic.go)
+  ⎿  Added 1 line, removed 1 line
+      93  
+      94  Fields: %s. city, language and gender take text (ops eq, neq, i
+          n); age takes a whole number
+      95  (eq, neq, in, gt, gte, lt, lte); created_at takes a date like 2
+          025-01-31 (gt, gte, lt, lte).
+      96 -language values are "tr" or "en". gender values are exactly %s.
+         - "in" takes a list of at most %d items.                        
+      96 +language values are exactly %s. gender values are exactly %s. "
+         +in" takes a list of at most %d items.                          
+      97  Events: %s, with within_days 1..%d. exists=false means the user
+           did NOT do it in that window.
+      98  Allowed ops: %s.
+      99  Use only these names. Never write SQL. Use the exact city spell
+          ing from the brief (e.g. İstanbul).`,
+
+● Update(backend\internal\llm\anthropic.go)
+  ⎿  Added 2 lines, removed 1 line
+       98  Allowed ops: %s.
+       99  Use only these names. Never write SQL. Use the exact city spel
+           ling from the brief (e.g. İstanbul).`,
+      100      now.Format("2006-01-02"), segment.MaxConditions,
+      101 -    strings.Join(fields, ", "), `"`+strings.Join(segment.Value
+          -s("gender"), `" or "`)+`"`, segment.MaxInValues,              
+      101 +    strings.Join(fields, ", "), `"`+strings.Join(segment.Value
+          +s("language"), `" or "`)+`"`,                                 
+      102 +    `"`+strings.Join(segment.Values("gender"), `" or "`)+`"`, 
+          +segment.MaxInValues,                                          
+      103      strings.Join(events, ", "), segment.MaxWithinDays, strings
+           .Join(ops, ", "))
+      104  }
+      105  
+
+● Write(backend\migrations\005_language_check.sql)
+  ⎿  Wrote 5 lines to backend\migrations\005_language_check.sql
+      1 -- +goose Up
+      2 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_language_check;
+      3 ALTER TABLE users ADD CONSTRAINT users_language_check CHECK (lang
+        uage IN ('tr', 'en'));
+      4 -- The reconciler only looks at messages that are still open.
+      5 CREATE INDEX IF NOT EXISTS messages_open ON messages (id) WHERE s
+        tatus IN ('pending', 'retrying');
+  ⎿  Found 1 new diagnostic issue in 1 file (ctrl+o to expand)
+
+● Bu slicescontains uyarısı mevcut contains fonksiyonuyla ilgili, benim
+  değişikliğim değil. Dokunmuyorum. Şimdi mock LLM'e yaş ve cinsiyeti ekliyorum.
+
+● Update(backend\internal\llm\mock.go)
+  ⎿  Added 7 lines
+      28    negation  = regexp.MustCompile(`almayan|almamis|yapmayan|yapm
+          amis|not |without|didn't|haven't|never`)
+      29    cartWords = []string{"sepet", "cart"}
+      30    buyWords  = []string{"satin al", "alisveris", "purchase", "bo
+          ught", "buy"}
+      31 +                                                               
+      32 +  femaleRe = regexp.MustCompile(`\b(kadin|bayan|women|woman|fem
+         +ale|ladies)`)                                                  
+      33 +  maleRe   = regexp.MustCompile(`\b(erkek|men|man|male)\b`)    
+      34 +  // Every age form needs an age word, so "%30 indirim" or "30 
+         +gun" never match.                                              
+      35 +  ageRangeRe = regexp.MustCompile(`(\d+)\s*(?:-|ile|to)\s*(\d+)
+         +\s*(?:yas|years? old)`)                                        
+      36 +  ageMinRe   = regexp.MustCompile(`(\d+)\s*\+?\s*(?:yas\s*(?:us
+         +tu|uzeri)|years? old\b|\+)|over\s+(\d+)\s*(?:years? old|yo)`)  
+      37 +  ageMaxRe   = regexp.MustCompile(`(\d+)\s*yas\s*alti|under\s+(
+         +\d+)\s*(?:years? old|yo)`)                                     
+      38  )
+      39  
+      40  // fold lowercases and strips Turkish letters so "İstanbul'daki
+          " matches "istanbul".
+  ⎿  Found 5 new diagnostic issues in 1 file (ctrl+o to expand)
+
+● Regex'lerim fazla karışık oldu ve Türkçe ekler için (erkeklere) sondaki \b
+  yanlış çalışırdı. Sadeleştiriyorum.
+
+● Update(backend\internal\llm\mock.go)  ⎿  Added 5 lines, removed 4 lines
+      29    cartWords = []string{"sepet", "cart"}
+      30    buyWords  = []string{"satin al", "alisveris", "purchase", "bo
+          ught", "buy"}
+      31  
+      32 -  femaleRe = regexp.MustCompile(`\b(kadin|bayan|women|woman|fem
+         -ale|ladies)`)                                                  
+      33 -  maleRe   = regexp.MustCompile(`\b(erkek|men|man|male)\b`)    
+      32 +  // Turkish words take suffixes ("erkeklere"), so they match a
+         +s prefixes; English ones as whole words.                       
+      33 +  femaleRe = regexp.MustCompile(`\b(?:kadin|bayan|women\b|woman
+         +\b|female\b|ladies\b)`)                                        
+      34 +  maleRe   = regexp.MustCompile(`\b(?:erkek|men\b|man\b|male\b)
+         +`)                                                             
+      35    // Every age form needs an age word, so "%30 indirim" or "30 
+          gun" never match.
+      36    ageRangeRe = regexp.MustCompile(`(\d+)\s*(?:-|ile|to)\s*(\d+)
+          \s*(?:yas|years? old)`)
+      36 -  ageMinRe   = regexp.MustCompile(`(\d+)\s*\+?\s*(?:yas\s*(?:us
+         -tu|uzeri)|years? old\b|\+)|over\s+(\d+)\s*(?:years? old|yo)`)  
+      37 -  ageMaxRe   = regexp.MustCompile(`(\d+)\s*yas\s*alti|under\s+(
+         -\d+)\s*(?:years? old|yo)`)                                     
+      37 +  ageMinRe   = regexp.MustCompile(`(\d+)\s*yas\s*(?:ustu|uzeri)
+         +|over\s+(\d+)\s*years? old|(\d+)\+\s*(?:yas|years? old)`)      
+      38 +  ageMaxRe   = regexp.MustCompile(`(\d+)\s*yas\s*alti|under\s+(
+         +\d+)\s*years? old`)                                            
+      39  )
+      40  
+      41  // fold lowercases and strips Turkish letters so "İstanbul'daki
+          " matches "istanbul".
+  ⎿  Found 5 new diagnostic issues in 1 file (ctrl+o to expand)
+
+● Şimdi Audience içine mantığı ekliyorum.
+
+● Update(backend\internal\llm\mock.go)
+  ⎿  Added 15 lines
+      78    if strings.Contains(b, "ingilizce") || strings.Contains(b, "e
+          nglish") {
+      79      conds = append(conds, segment.Node{Field: "language", Op: "
+          eq", Value: "en"})
+      80    }
+      81 +  // Both genders in one brief is ambiguous, so neither is used
+         +.                                                              
+      82 +  if female, male := femaleRe.MatchString(b), maleRe.MatchStrin
+         +g(b); female != male {                                         
+      83 +    gender := "male"                                           
+      84 +    if female {                                                
+      85 +      gender = "female"                                        
+      86 +    }                                                          
+      87 +    conds = append(conds, segment.Node{Field: "gender", Op: "eq
+         +", Value: gender})                                             
+      88 +  }                                                            
+      89 +  if m := ageRangeRe.FindStringSubmatch(b); m != nil {         
+      90 +    conds = append(conds, ageCond("gte", m[1]), ageCond("lte", 
+         +m[2]))                                                         
+      91 +  } else if n := firstNumber(ageMinRe.FindStringSubmatch(b)); n
+         + != "" {                                                       
+      92 +    conds = append(conds, ageCond("gte", n))                   
+      93 +  } else if n := firstNumber(ageMaxRe.FindStringSubmatch(b)); n
+         + != "" {                                                       
+      94 +    conds = append(conds, ageCond("lt", n))                    
+      95 +  }                                                            
+      96    if containsAny(b, cartWords) {
+      97      conds = append(conds, segment.Node{Event: "cart_add", Withi
+          nDays: days, Exists: &yes})
+      98    }
+
+● Update(backend\internal\llm\mock.go)
+  ⎿  Added 17 lines
+      53    return false
+      54  }
+      55  
+      56 +// firstNumber returns the first captured number of a match, si
+         +nce the Turkish                                                
+      57 +// and English forms of a pattern capture into different groups
+         +.                                                              
+      58 +func firstNumber(m []string) string {                          
+      59 +  for _, s := range m[min(1, len(m)):] {                       
+      60 +    if s != "" {                                               
+      61 +      return s                                                 
+      62 +    }                                                          
+      63 +  }                                                            
+      64 +  return ""                                                    
+      65 +}                                                              
+      66 +                                                               
+      67 +// ageCond is bound by the validator (0..150), so an absurd num
+         +ber becomes a repair problem, not SQL.                         
+      68 +func ageCond(op, n string) segment.Node {                      
+      69 +  v, _ := strconv.Atoi(n)                                      
+      70 +  return segment.Node{Field: "age", Op: op, Value: float64(v)} 
+      71 +}                                                              
+      72 +                                                               
+      73  func (m Mock) Audience(_ context.Context, brief string, previou
+          s json.RawMessage, _ []string) (json.RawMessage, error) {
+      74    if m.Err != nil {
+      75      return nil, m.Err
+
+● Value için int yeterli, çünkü sonuç zaten JSON'a çevriliyor. Sadeleştiriyorum.
+
+● Update(backend\internal\llm\mock.go)
+  ⎿  Added 1 line, removed 2 lines
+      64    return ""
+      65  }
+      66  
+      67 -// ageCond is bound by the validator (0..150), so an absurd num
+         -ber becomes a repair problem, not SQL.                         
+      67  func ageCond(op, n string) segment.Node {
+      68    v, _ := strconv.Atoi(n)
+      70 -  return segment.Node{Field: "age", Op: op, Value: float64(v)} 
+      69 +  return segment.Node{Field: "age", Op: op, Value: v}          
+      70  }
+      71  
+      72  func (m Mock) Audience(_ context.Context, brief string, previou
+          s json.RawMessage, _ []string) (json.RawMessage, error) {
+
+● Update(backend\internal\llm\llm_test.go)
+  ⎿  Added 25 lines
+      32        `{"match":"all","conditions":[{"field":"city","op":"eq","
+          value":"İstanbul"},{"field":"language","op":"eq","value":"en"},
+          {"event":"cart_add","within_days":30,"exists":true}]}`,
+      33      },
+      34      {
+      35 +      "turkish age range and gender",                          
+      36 +      "Ankara'daki 18-24 yaş arası kadınlara öğrenci indirimi",
+      37 +      `{"match":"all","conditions":[{"field":"city","op":"eq","
+         +value":"Ankara"},{"field":"gender","op":"eq","value":"female"},
+         +{"field":"age","op":"gte","value":18},{"field":"age","op":"lte"
+         +,"value":24}]}`,                                               
+      38 +    },                                                         
+      39 +    {                                                          
+      40 +      "turkish age maximum with gender suffix",                
+      41 +      "İzmir'deki 25 yaş altı erkeklere duyuru",               
+      42 +      `{"match":"all","conditions":[{"field":"city","op":"eq","
+         +value":"İzmir"},{"field":"gender","op":"eq","value":"male"},{"f
+         +ield":"age","op":"lt","value":25}]}`,                          
+      43 +    },                                                         
+      44 +    {                                                          
+      45 +      "english age minimum, women is not men",                 
+      46 +      "Thank English-speaking women over 40 years old who made 
+         +a purchase in the last 60 days",                               
+      47 +      `{"match":"all","conditions":[{"field":"language","op":"e
+         +q","value":"en"},{"field":"gender","op":"eq","value":"female"},
+         +{"field":"age","op":"gte","value":40},{"event":"purchase","with
+         +in_days":60,"exists":true}]}`,                                 
+      48 +    },                                                         
+      49 +    {                                                          
+      50 +      "turkish age minimum",                                   
+      51 +      "40 yaş üstü kullanıcılar",                              
+      52 +      `{"match":"all","conditions":[{"field":"age","op":"gte","
+         +value":40},{"event":"page_view","within_days":30,"exists":true}
+         +]}`,                                                           
+      53 +    },                                                         
+      54 +    {                                                          
+      55 +      "both genders is ambiguous, percent and days are not ages
+         +",                                                             
+      56 +      "kadın ve erkek müşterilere %30 indirim, 30 gün geçerli",
+      57 +      `{"match":"all","conditions":[{"event":"page_view","withi
+         +n_days":30,"exists":true}]}`,                                  
+      58 +    },                                                         
+      59 +    {                                                          
+      60        "absurd day count is ignored",
+      61        "sepet 9999 gün",
+      62        `{"match":"all","conditions":[{"event":"cart_add","within
+          _days":30,"exists":true}]}`,
+
+● Update(backend\internal\llm\llm_test.go)
+  ⎿  Added 1 line, removed 1 line
+      77  }
+      78  
+      79  func TestMockOutputAlwaysValid(t *testing.T) {
+      80 -  for _, brief := range []string{"", "x", "Ankara sepet satın a
+         -ldı 400 gün", "İzmir english satın almayan 1 gün"} {           
+      80 +  for _, brief := range []string{"", "x", "Ankara sepet satın a
+         +ldı 400 gün", "İzmir english satın almayan 1 gün", "Bursa 30 ya
+         +ş altı kadınlara sepet", "18 ile 65 yaş arası erkekler"} {     
+      81      node, err := BuildAudience(context.Background(), Mock{}, br
+          ief)
+      82      if err != nil {
+      83        t.Fatalf("%q: %v", brief, err)
+
+● Update(backend\internal\segment\segment_test.go)
+  ⎿  Added 1 line
+      83      {"op not allowed for field", `{"match":"all","conditions":[
+          {"field":"city","op":"gt","value":"x"}]}`, "sms", `op "gt" not 
+          allowed`},
+      84      {"wrong value type", `{"match":"all","conditions":[{"field"
+          :"age","op":"gt","value":"old"}]}`, "sms", "whole number"},
+      85      {"fractional age", `{"match":"all","conditions":[{"field":"
+          age","op":"gt","value":30.5}]}`, "sms", "whole number"},
+      86 +    {"language outside the set", `{"match":"all","conditions":[
+         +{"field":"language","op":"eq","value":"de"}]}`, "sms", `value "
+         +de" is not one of tr, en`},                                    
+      87      {"gender outside the set", `{"match":"all","conditions":[{"
+          field":"gender","op":"eq","value":"erkek"}]}`, "sms", `value "e
+          rkek" is not one of male, female`},
+      88      {"gender list outside the set", `{"match":"all","conditions
+          ":[{"field":"gender","op":"in","value":["male","other"]}]}`, "s
+          ms", `value "other" is not one of`},
+      89      {"in needs list", `{"match":"all","conditions":[{"field":"c
+          ity","op":"in","value":"Ankara"}]}`, "sms", "list of 1.."},
+  ⎿  Found 2 new diagnostic issues in 1 file (ctrl+o to expand)
+
+● Şimdi mock provider'a GET /messages/{key} ekliyorum.
+
+● Update(backend\cmd\mockprovider\main.go)
+  ⎿  Added 14 lines
+      48    mux := http.NewServeMux()
+      49    mux.HandleFunc("POST /sms", p.send("sms"))
+      50    mux.HandleFunc("POST /email", p.send("email"))
+      51 +  mux.HandleFunc("GET /messages/{key}", p.lookup)              
+      52    return mux
+      53  }
+      54  
+      55 +// lookup tells a caller that lost the answer to a send whether
+         + it was delivered.                                             
+      56 +// It skips the injected errors and the rate limit: it is a rea
+         +d, not a delivery.                                             
+      57 +func (p *provider) lookup(w http.ResponseWriter, r *http.Reques
+         +t) {                                                           
+      58 +  p.mu.Lock()                                                  
+      59 +  id, ok := p.seen[r.PathValue("key")]                         
+      60 +  p.mu.Unlock()                                                
+      61 +  if !ok {                                                     
+      62 +    http.NotFound(w, r)                                        
+      63 +    return                                                     
+      64 +  }                                                            
+      65 +  writeID(w, id)                                               
+      66 +}                                                              
+      67 +                                                               
+      68  func (p *provider) send(channel string) http.HandlerFunc {
+      69    return func(w http.ResponseWriter, r *http.Request) {
+      70      time.Sleep(p.cfg.Delay)
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(backend\cmd\mockprovider\main_test.go)
+  ⎿  Added 23 lines
+      37    }
+      38  }
+      39  
+      40 +func TestLookupFindsOnlyDeliveredKeys(t *testing.T) {          
+      41 +  // Every send fails, so a key can only be known if it was del
+         +ivered before.                                                 
+      42 +  p := newProvider(config{LimitPerSec: 100})                   
+      43 +  h := p.handler()                                             
+      44 +  get := func(key string) *httptest.ResponseRecorder {         
+      45 +    rec := httptest.NewRecorder()                              
+      46 +    h.ServeHTTP(rec, httptest.NewRequest("GET", "/messages/"+ke
+         +y, nil))                                                       
+      47 +    return rec                                                 
+      48 +  }                                                            
+      49 +  if got := get("k1"); got.Code != 404 {                       
+      50 +    t.Fatalf("unknown key: %d, want 404", got.Code)            
+      51 +  }                                                            
+      52 +  sent := post(h, "/sms", "k1", smsBody)                       
+      53 +  if got := get("k1"); got.Code != 200 || got.Body.String() != 
+         +sent.Body.String() {                                           
+      54 +    t.Errorf("delivered key: %d %q, want the id of the send %q"
+         +, got.Code, got.Body, sent.Body)                               
+      55 +  }                                                            
+      56 +  p.cfg.ErrorRate = 1                                          
+      57 +  post(h, "/sms", "k2", smsBody)                               
+      58 +  if got := get("k2"); got.Code != 404 {                       
+      59 +    t.Errorf("failed send must not look delivered: %d", got.Cod
+         +e)                                                             
+      60 +  }                                                            
+      61 +}                                                              
+      62 +                                                               
+      63  func TestRejectsInvalidRecipients(t *testing.T) {
+      64    h := newProvider(config{LimitPerSec: 100}).handler()
+      65    if rec := post(h, "/sms", "a", `{"to":"05550000001","body":"x
+          "}`); rec.Code != 400 {
+
+● Update(backend\internal\sender\provider.go)
+  ⎿  Added 31 lines
+      41    return &Provider{BaseURL: baseURL, HTTP: &http.Client{Timeout
+          : 10 * time.Second}}
+      42  }
+      43  
+      44 +// Key is the idempotency key of a message: the provider uses i
+         +t to ignore a                                                  
+      45 +// repeated delivery and to answer Lookup.                     
+      46 +func Key(messageID int64) string { return fmt.Sprintf("message-
+         +%d", messageID) }                                              
+      47 +                                                               
+      48 +// Lookup asks the provider whether the message with this key w
+         +as delivered, for                                              
+      49 +// the case where we never saw the answer. It returns "" when n
+         +othing was delivered.                                          
+      50 +func (p *Provider) Lookup(ctx context.Context, key string) (str
+         +ing, error) {                                                  
+      51 +  req, err := http.NewRequestWithContext(ctx, http.MethodGet, p
+         +.BaseURL+"/messages/"+key, nil)                                
+      52 +  if err != nil {                                              
+      53 +    return "", err                                             
+      54 +  }                                                            
+      55 +  resp, err := p.HTTP.Do(req)                                  
+      56 +  if err != nil {                                              
+      57 +    return "", err                                             
+      58 +  }                                                            
+      59 +  defer resp.Body.Close()                                      
+      60 +  switch resp.StatusCode {                                     
+      61 +  case http.StatusOK:                                          
+      62 +    var out struct {                                           
+      63 +      ID string `json:"id"`                                    
+      64 +    }                                                          
+      65 +    if err := json.NewDecoder(io.LimitReader(resp.Body, 4096)).
+         +Decode(&out); err != nil || out.ID == "" {                     
+      66 +      return "", fmt.Errorf("provider lookup answered 200 witho
+         +ut an id")                                                     
+      67 +    }                                                          
+      68 +    return out.ID, nil                                         
+      69 +  case http.StatusNotFound:                                    
+      70 +    return "", nil                                             
+      71 +  }                                                            
+      72 +  return "", fmt.Errorf("provider lookup answered %d", resp.Sta
+         +tusCode)                                                       
+      73 +}                                                              
+      74 +                                                               
+      75  // Send returns the provider's message id. Timeouts, 429 and 5x
+          x are retryable;
+      76  // every other 4xx is not (the message itself is wrong, retryin
+          g won't fix it).
+      77  func (p *Provider) Send(ctx context.Context, r Request) (string
+          , error) {
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Outgoing'e Attempts alanını ekliyorum. Worker, önceki bir denemenin provider'a
+  ulaşmış olabileceğini buradan anlayacak. Reconciler için de açık mesajları
+  listeleyen sorguyu yazıyorum.
+
+● Update(backend\internal\store\messages.go)
+  ⎿  Added 1 line
+      118    ID         int64
+      119    CampaignID int64
+      120    Status     string
+      121 +  Attempts   int // provider calls so far; above 0 an earlier 
+          +one may have been delivered unnoticed                         
+      122    Channel    string
+      123    To         string
+      124    Consent    bool // the person's consent for this channel rig
+           ht now
+
+● Update(backend\internal\store\messages.go)
+  ⎿  Added 1 line, removed 1 line
+      130    var o Outgoing
+      131    var first, last, city, email, phone string
+      132    err := s.pool.QueryRow(ctx, `
+      133 -    SELECT m.id, m.campaign_id, m.status, m.channel, u.first_n
+          -ame, u.last_name, u.city, u.email, u.phone,                   
+      133 +    SELECT m.id, m.campaign_id, m.status, m.attempts, m.channe
+          +l, u.first_name, u.last_name, u.city, u.email, u.phone,       
+      134             CASE m.channel WHEN 'sms' THEN u.consent_sms ELSE u
+           .consent_email END,
+      135             c.subject, c.body
+      136      FROM messages m
+
+● Update(backend\internal\store\messages.go)
+  ⎿  Added 1 line, removed 1 line
+      137      JOIN users u ON u.id = m.user_id
+      138      JOIN campaign_contents c ON c.campaign_id = m.campaign_id 
+           AND c.channel = m.channel AND c.variant = m.variant AND c.lang
+           uage = m.language
+      139      WHERE m.id = $1`, id).
+      140 -    Scan(&o.ID, &o.CampaignID, &o.Status, &o.Channel, &first, 
+          -&last, &city, &email, &phone, &o.Consent,                     
+      140 +    Scan(&o.ID, &o.CampaignID, &o.Status, &o.Attempts, &o.Chan
+          +nel, &first, &last, &city, &email, &phone, &o.Consent,        
+      141        &o.Template.Subject, &o.Template.Body)
+      142    if errors.Is(err, pgx.ErrNoRows) {
+      143      return o, ErrNotFound
+
+● Update(backend\internal\store\messages.go)
+  ⎿  Added 30 lines
+      209    return out, rows.Err()
+      210  }
+      211  
+      212 +// Open is a message that is neither sent nor failed yet.     
+      213 +type Open struct {                                            
+      214 +  ID         int64                                            
+      215 +  CampaignID int64                                            
+      216 +  Channel    string                                           
+      217 +}                                                             
+      218 +                                                              
+      219 +// OpenMessages returns pending and retrying messages untouche
+          +d for at least                                                
+      220 +// idle, oldest first. Every status change and attempt bumps u
+          +pdated_at, so a                                               
+      221 +// message a worker is handling right now is not in the result
+          +.                                                             
+      222 +func (s *Store) OpenMessages(ctx context.Context, idle time.Du
+          +ration, limit int) ([]Open, error) {                          
+      223 +  rows, err := s.pool.Query(ctx, `                            
+      224 +    SELECT id, campaign_id, channel FROM messages             
+      225 +    WHERE status IN ('pending', 'retrying') AND updated_at < n
+          +ow() - make_interval(secs => $1)                              
+      226 +    ORDER BY id LIMIT $2`, idle.Seconds(), limit)             
+      227 +  if err != nil {                                             
+      228 +    return nil, err                                           
+      229 +  }                                                           
+      230 +  defer rows.Close()                                          
+      231 +  var out []Open                                              
+      232 +  for rows.Next() {                                           
+      233 +    var o Open                                                
+      234 +    if err := rows.Scan(&o.ID, &o.CampaignID, &o.Channel); err
+          + != nil {                                                     
+      235 +      return nil, err                                         
+      236 +    }                                                         
+      237 +    out = append(out, o)                                      
+      238 +  }                                                           
+      239 +  return out, rows.Err()                                      
+      240 +}                                                             
+      241 +                                                              
+      242  // FailStalled marks messages failed when Asynq archived their
+            task before the
+      243  // worker could record a result, and completes the campaigns t
+           hat were waiting on them.
+      244  func (s *Store) FailStalled(ctx context.Context, ids []int64, 
+           reason string) error {
+
+  Ran 1 shell command (ctrl+o to expand)
+  ⎿  Found 2 new diagnostic issues in 2 files (ctrl+o to expand)
+
+● Bu iki tanılama, import'u eklemeden önceki duruma ait olabilir. CampaignCounts
+  için de doğrulayayım.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Tanılamalar eskiymiş, ikisi de yerinde. Şimdi worker'ı değiştiriyorum: önceki
+  deneme provider'a ulaşmış olabilirse önce Lookup, sonra gönderim ya da failed
+  yazımı.
+● Update(backend\internal\sender\handler.go)
+  ⎿  Added 1 line, removed 1 line
+      72      return fmt.Errorf("message %d: %v: %w", p.MessageID, err, a
+          synq.SkipRetry)
+      73    }
+      74    if err != nil {
+      75 -    // ponytail: if the database stays down through the last at
+         -tempt the row stays pending; a periodic reconciler would catch 
+         -that.                                                          
+      75 +    // If the database stays down through the last attempt the 
+         +row stays pending; Reconcile catches that.                     
+      76      return err
+      77    }
+      78    if m.Status == "sent" || m.Status == "failed" {
+
+● Update(backend\internal\sender\handler.go)
+  ⎿  Added 6 lines
+       90      }
+       91    }()
+       92  
+       93 +  // An earlier attempt may have been delivered without us sav
+          +ing it (a lost answer, a crash                                
+       94 +  // before MarkSent). Asking first avoids sending again, and 
+          +records the real outcome.                                     
+       95 +  if done, err := h.recordIfDelivered(ctx, m); done {         
+       96 +    return err                                                
+       97 +  }                                                           
+       98 +                                                              
+       99    // Consent is checked again here: the person may have withdr
+           awn it since the fan-out.
+      100    if !m.Consent {
+      101      return h.fail(ctx, m, "no "+m.Channel+" consent", asynq.Sk
+           ipRetry)
+
+● Update(backend\internal\sender\handler.go)
+  ⎿  Added 1 line
+      109    if err := h.Store.StartAttempt(ctx, m.ID); err != nil {
+      110      return err
+      111    }
+      112 +  m.Attempts++ // the deferred give-up above and fail() see th
+          +at this run may have reached the provider                     
+      113    if err := h.Limiter.Wait(ctx, m.Channel); err != nil {
+      114      return err // Redis trouble or shutdown: let Asynq retry
+      115    }
+
+● Update(backend\internal\sender\handler.go)
+  ⎿  Added 1 line, removed 1 line
+      119      To:      m.To,
+      120      Subject: content.Render(m.Template.Subject, m.Vars),
+      121      Body:    content.Render(m.Template.Body, m.Vars),
+      122 -    Key:     fmt.Sprintf("message-%d", m.ID),                 
+      122 +    Key:     Key(m.ID),                                       
+      123    })
+      124    if err == nil {
+      125      if err := h.Store.MarkSent(ctx, m.ID, id); err != nil {
+
+● Update(backend\internal\sender\handler.go)
+  ⎿  Added 23 lines, removed 1 line
+      144    return err
+      145  }
+      146  
+      147 +// recordIfDelivered asks the provider about a message that ma
+          +y already have gone                                           
+      148 +// out. done is true when it was delivered; err is then only a
+          + failure to save that.                                        
+      149 +// A provider that cannot answer counts as not delivered: the 
+          +caller sends, and the                                         
+      150 +// idempotency key still stops a duplicate.                   
+      151 +func (h *Handler) recordIfDelivered(ctx context.Context, m sto
+          +re.Outgoing) (done bool, err error) {                         
+      152 +  if m.Attempts == 0 {                                        
+      153 +    return false, nil                                         
+      154 +  }                                                           
+      155 +  id, lookupErr := h.Provider.Lookup(ctx, Key(m.ID))          
+      156 +  if lookupErr != nil || id == "" {                           
+      157 +    return false, nil                                         
+      158 +  }                                                           
+      159 +  if err := h.Store.MarkSent(ctx, m.ID, id); err != nil {     
+      160 +    return true, err                                          
+      161 +  }                                                           
+      162 +  return true, h.Store.CompleteIfDone(ctx, m.CampaignID)      
+      163 +}                                                             
+      164 +                                                              
+      165  // fail records the final failure. skip is asynq.SkipRetry to 
+           archive the task
+      148 -// right away, or nil when Asynq is already out of retries.   
+      166 +// right away, or nil when Asynq is already out of retries. A 
+          +message the provider                                          
+      167 +// did deliver is recorded as sent instead.                   
+      168  func (h *Handler) fail(ctx context.Context, m store.Outgoing, 
+           reason string, skip error) error {
+      169 +  if done, err := h.recordIfDelivered(ctx, m); done {         
+      170 +    return err                                                
+      171 +  }                                                           
+      172    if err := h.Store.MarkFailed(ctx, m.ID, reason); err != nil 
+           {
+      173      return err
+      174    }
+  ⎿  Found 3 new diagnostic issues in 1 file (ctrl+o to expand)
+
+● cmd/api hataları bana ait olmayan, eski görünen bir dosyada; derlemede ayrıca
+  doğrulayacağım. Şimdi reconciler'ı, arşivi taramak yerine açık mesajlara bakıp
+  her arşivlenmiş görev için provider'a sorgu yapacak şekilde yeniden
+  yazıyorum. · summary
+
+● Write(backend\internal\sender\reconcile.go)
+  ⎿  Added 47 lines, removed 36 lines
+       2  
+       3  import (
+       4    "context"
+       5 -  "encoding/json"                                              
+       5    "errors"
+       6 +  "time"                                                       
+       7  
+       8    "github.com/hibiken/asynq"
+       9  
+      10    "github.com/praganter/insider-case/backend/internal/store"
+      11  )
+      12  
+      13 -const reconcilePage = 500                                      
+      13 +const (                                                        
+      14 +  reconcileBatch = 500                                         
+      15 +  // reconcileIdle skips messages a worker touched recently, so
+         + one being handled right now is left alone.                    
+      16 +  reconcileIdle = time.Minute                                  
+      17 +)                                                              
+      18  
+      15 -// Reconcile fails the messages whose task Asynq archived witho
+         -ut the handler                                                 
+      16 -// recording a result (for example the database was down during
+         - the last                                                      
+      17 -// attempt). Asynq keeps an archived task's id, so enqueueing i
+         -t again would be                                               
+      18 -// a no-op; the archive itself is the reliable signal that noth
+         -ing else will                                                  
+      19 -// touch the message. A message still being worked on is never 
+         -in the archive.                                                
+      20 -// ponytail: scans every archived task per call, fine for a PoC
+         -; page by time if the archive grows large.                     
+      21 -func Reconcile(ctx context.Context, st *store.Store, insp *asyn
+         -q.Inspector) error {                                           
+      22 -  for _, queue := range []string{"sms", "email"} {             
+      23 -    for page := 1; ; page++ {                                  
+      24 -      tasks, err := insp.ListArchivedTasks(queue, asynq.Page(pa
+         -ge), asynq.PageSize(reconcilePage))                            
+      25 -      if errors.Is(err, asynq.ErrQueueNotFound) {              
+      26 -        break // nothing was ever queued for this channel      
+      27 -      }                                                        
+      28 -      if err != nil {                                          
+      29 -        return err                                             
+      30 -      }                                                        
+      31 -      var ids []int64                                          
+      32 -      for _, t := range tasks {                                
+      33 -        var p struct {                                         
+      34 -          MessageID int64 `json:"message_id"`                  
+      35 -        }                                                      
+      36 -        if json.Unmarshal(t.Payload, &p) == nil && p.MessageID 
+         -> 0 {                                                          
+      37 -          ids = append(ids, p.MessageID)                       
+      38 -        }                                                      
+      39 -      }                                                        
+      40 -      if len(ids) > 0 {                                        
+      41 -        if err := st.FailStalled(ctx, ids, "task archived befor
+         -e the result was saved"); err != nil {                         
+      42 -          return err                                           
+      43 -        }                                                      
+      44 -      }                                                        
+      45 -      if len(tasks) < reconcilePage {                          
+      46 -        break                                                  
+      47 -      }                                                        
+      19 +// Reconcile settles the open messages whose task Asynq archive
+         +d without the                                                  
+      20 +// handler recording a result (for example the database was dow
+         +n during the last                                              
+      21 +// attempt). Asynq keeps an archived task's id, so enqueueing i
+         +t again would be a                                             
+      22 +// no-op; the archive itself is the reliable signal that nothin
+         +g else will touch                                              
+      23 +// the message. The provider has the last word: a message it de
+         +livered becomes                                                
+      24 +// sent, the rest become failed. If it cannot answer, the messa
+         +ge waits for the next run.                                     
+      25 +// ponytail: checks at most reconcileBatch of the oldest open m
+         +essages per call, so a larger backlog drains over several runs.
+      26 +func Reconcile(ctx context.Context, st *store.Store, insp *asyn
+         +q.Inspector, prov *Provider) error {                           
+      27 +  open, err := st.OpenMessages(ctx, reconcileIdle, reconcileBat
+         +ch)                                                            
+      28 +  if err != nil {                                              
+      29 +    return err                                                 
+      30 +  }                                                            
+      31 +  var failed []int64                                           
+      32 +  for _, m := range open {                                     
+      33 +    info, err := insp.GetTaskInfo(m.Channel, Key(m.ID))        
+      34 +    if errors.Is(err, asynq.ErrQueueNotFound) || errors.Is(err,
+         + asynq.ErrTaskNotFound) {                                      
+      35 +      continue                                                 
+      36      }
+      37 +    if err != nil {                                            
+      38 +      return err                                               
+      39 +    }                                                          
+      40 +    if info.State != asynq.TaskStateArchived {                 
+      41 +      continue                                                 
+      42 +    }                                                          
+      43 +    id, err := prov.Lookup(ctx, Key(m.ID))                     
+      44 +    if err != nil {                                            
+      45 +      continue                                                 
+      46 +    }                                                          
+      47 +    if id == "" {                                              
+      48 +      failed = append(failed, m.ID)                            
+      49 +      continue                                                 
+      50 +    }                                                          
+      51 +    if err := st.MarkSent(ctx, m.ID, id); err != nil {         
+      52 +      return err                                               
+      53 +    }                                                          
+      54 +    if err := st.CompleteIfDone(ctx, m.CampaignID); err != nil 
+         +{                                                              
+      55 +      return err                                               
+      56 +    }                                                          
+      57    }
+      50 -  return nil                                                   
+      58 +  if len(failed) == 0 {                                        
+      59 +    return nil                                                 
+      60 +  }                                                            
+      61 +  return st.FailStalled(ctx, failed, "task archived before the 
+         +result was saved")                                             
+      62  }
+
+  Ran 1 shell command (ctrl+o to expand)
+  ⎿  Found 2 new diagnostic issues in 2 files (ctrl+o to expand)
+
+● strconv artık handler.go'da kullanılmıyor. Worker'da da prov değişkeni yok,
+  h.Provider var. İkisini düzeltiyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Şimdi testler. Önce mevcut reconcile testini yeni imzaya ve "yeni dokunulmuş
+  mesaja bakılmaz" kuralına uyduruyorum.
+
+● Update(backend\internal\sender\sender_test.go)
+  ⎿  Added 5 lines
+      528      t.Fatal(err)
+      529    }
+      530    insp := asynq.NewInspector(opt)
+      531 +  fake := &lookupProvider{delivered: map[string]string{}}     
+      532 +  srv := httptest.NewServer(fake)                             
+      533 +  defer srv.Close()                                           
+      534 +  h.Provider = NewProvider(srv.URL)                           
+      535 +  age := func() { ageMessage(t, pool, msgID) }                
+      536    state := func() (string, string) {
+      537      var m, c string
+      538      pool.QueryRow(ctx, `SELECT status FROM messages WHERE id =
+            $1`, msgID).Scan(&m)
+
+● Update(backend\internal\sender\sender_test.go)
+  ⎿  Added 11 lines, removed 2 lines
+      540      return m, c
+      541    }
+      542  
+      543 -  if err := Reconcile(ctx, h.Store, insp); err != nil {       
+      543 +  age()                                                       
+      544 +  if err := Reconcile(ctx, h.Store, insp, h.Provider); err != 
+          +nil {                                                         
+      545      t.Fatal(err)
+      546    }
+      547    if m, c := state(); m != "pending" || c != "sending" {
+     ...
+      551    if err := insp.ArchiveTask("sms", "message-"+strconv.FormatI
+           nt(msgID, 10)); err != nil {
+      552      t.Fatal(err)
+      553    }
+      554 +  pool.Exec(ctx, `UPDATE messages SET updated_at = now() WHERE
+          + id = $1`, msgID)                                             
+      555 +  if err := Reconcile(ctx, h.Store, insp, h.Provider); err != 
+          +nil {                                                         
+      556 +    t.Fatal(err)                                              
+      557 +  }                                                           
+      558 +  if m, _ := state(); m != "pending" {                        
+      559 +    t.Fatalf("a message touched a moment ago must be left alon
+          +e, got %s", m)                                                
+      560 +  }                                                           
+      561 +  age()                                                       
+      562    for range 2 { // the second run changes nothing
+      554 -    if err := Reconcile(ctx, h.Store, insp); err != nil {     
+      563 +    if err := Reconcile(ctx, h.Store, insp, h.Provider); err !
+          += nil {                                                       
+      564        t.Fatal(err)
+      565      }
+      566      if m, c := state(); m != "failed" || c != "completed" {
+  ⎿  Found 2 new diagnostic issues in 1 file (ctrl+o to expand)
+
+● Eksik yardımcıları ve yeni testleri dosyanın sonuna ekliyorum. Önce Limiter ve
+  Redis'in testlerde nasıl kurulduğuna bakıyorum.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Önceki komutta boş bir provider_test.go oluşmuş olabilir. Kontrol edip varsa
+  siliyorum, ardından Lookup istemci testini ekliyorum.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Kod hazır. Derleme ve testleri Docker içinde çalıştırıyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Sender testleri geçti. Migration testi sadece sürüm sayısını (4) sabit
+  tutuyor, şimdi 5 migration var. Düzeltip başka başarısızlık var mı diye de
+  bakıyorum.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Tek hata benim test beklentimde. Kitle koşulu olarak yaş bulununca page_view
+  yedeği devreye girmiyor, yani mock doğru çalışıyor. Beklentiyi düzeltiyorum.
+
+● Update(backend\internal\llm\llm_test.go)
+  ⎿  Added 1 line, removed 1 line
+      49      {
+      50        "turkish age minimum",
+      51        "40 yaş üstü kullanıcılar",
+      52 -      `{"match":"all","conditions":[{"field":"age","op":"gte","
+         -value":40},{"event":"page_view","within_days":30,"exists":true}
+         -]}`,                                                           
+      52 +      `{"match":"all","conditions":[{"field":"age","op":"gte","
+         +value":40}]}`,                                                 
+      53      },
+      54      {
+      55        "both genders is ambiguous, percent and days are not ages
+          ",
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Backend testlerinin hepsi geçiyor. (Limiter testindeki "101", testin kendi
+  belgelenmiş 105 toleransı içinde.) Şimdi dokümanlara geçiyorum, README önce.
+
+● Update(README.md)
+  ⎿  Added 1 line, removed 1 line
+      17  - **EN:** Empty `ANTHROPIC_API_KEY` = rule-based mock LLM (UI s
+          hows a MOCK badge); a key switches to the real model (`CLAUDE_M
+          ODEL`). With a key, API errors are shown with a retry; the app 
+          never falls back to mock silently.
+      18  - **TR:** Boş `ANTHROPIC_API_KEY` = kural tabanlı mock LLM (ara
+          yüzde MOCK rozeti); key varsa gerçek model kullanılır (`CLAUDE_
+          MODEL`). Key varken API hataları tekrar dene seçeneğiyle göster
+          ilir; mock'a sessizce düşülmez.
+      19  
+      20 -- **EN:** Default model is `claude-sonnet-5-5`. The mock LLM un
+         -derstands city, language (English), cart_add / purchase / page_
+         -view and "last N days"; age and gender rules need a real key. T
+         -he mock provider fails 5% and answers 429 for 5% of calls (`PRO
+         -VIDER_ERROR_RATE`, `PROVIDER_TOO_MANY_RATE` in `.env`) so retri
+         -es and the rate limit can be seen working.                     
+      20 +- **EN:** Default model is `claude-sonnet-5-5`. The mock LLM un
+         +derstands city, language (English), gender, age (ranges, over, 
+         +under), cart_add / purchase / page_view and "last N days"; anyt
+         +hing more nuanced needs a real key. The mock provider fails 5% 
+         +and answers 429 for 5% of calls (`PROVIDER_ERROR_RATE`, `PROVID
+         +ER_TOO_MANY_RATE` in `.env`) so retries and the rate limit can 
+         +be seen working.                                               
+      21  - **TR:** Varsayılan model `claude-sonnet-5-5`. Mock LLM şehir,
+           dil (İngilizce), cart_add / purchase / page_view ve "son N gün
+          " ifadelerini anlar; yaş ve cinsiyet kuralları gerçek key ister
+          . Mock provider çağrıların %5'inde hata, %5'inde 429 döner (`.e
+          nv` içinde `PROVIDER_ERROR_RATE`, `PROVIDER_TOO_MANY_RATE`); bö
+          ylece retry ve rate limit çalışırken görülebilir.
+      22  
+      23  ## Architecture / Mimari
+
+● Update(README.md)  ⎿  Added 1 line, removed 1 line
+      18  - **TR:** Boş `ANTHROPIC_API_KEY` = kural tabanlı mock LLM (ara
+          yüzde MOCK rozeti); key varsa gerçek model kullanılır (`CLAUDE_
+          MODEL`). Key varken API hataları tekrar dene seçeneğiyle göster
+          ilir; mock'a sessizce düşülmez.
+      19  
+      20  - **EN:** Default model is `claude-sonnet-5-5`. The mock LLM un
+          derstands city, language (English), gender, age (ranges, over, 
+          under), cart_add / purchase / page_view and "last N days"; anyt
+          hing more nuanced needs a real key. The mock provider fails 5% 
+          and answers 429 for 5% of calls (`PROVIDER_ERROR_RATE`, `PROVID
+          ER_TOO_MANY_RATE` in `.env`) so retries and the rate limit can 
+          be seen working.
+      21 -- **TR:** Varsayılan model `claude-sonnet-5-5`. Mock LLM şehir,
+         - dil (İngilizce), cart_add / purchase / page_view ve "son N gün
+         -" ifadelerini anlar; yaş ve cinsiyet kuralları gerçek key ister
+         -. Mock provider çağrıların %5'inde hata, %5'inde 429 döner (`.e
+         -nv` içinde `PROVIDER_ERROR_RATE`, `PROVIDER_TOO_MANY_RATE`); bö
+         -ylece retry ve rate limit çalışırken görülebilir.              
+      21 +- **TR:** Varsayılan model `claude-sonnet-5-5`. Mock LLM şehir,
+         + dil (İngilizce), cinsiyet, yaş (aralık, üstü, altı), cart_add 
+         +/ purchase / page_view ve "son N gün" ifadelerini anlar; daha i
+         +nce ifadeler gerçek key ister. Mock provider çağrıların %5'inde
+         + hata, %5'inde 429 döner (`.env` içinde `PROVIDER_ERROR_RATE`, 
+         +`PROVIDER_TOO_MANY_RATE`); böylece retry ve rate limit çalışırk
+         +en görülebilir.                                                
+      22  
+      23  ## Architecture / Mimari
+      24  
+
+● Update(README.md)
+  ⎿  Added 12 lines
+      20  - **EN:** Default model is `claude-sonnet-5-5`. The mock LLM un
+          derstands city, language (English), gender, age (ranges, over, 
+          under), cart_add / purchase / page_view and "last N days"; anyt
+          hing more nuanced needs a real key. The mock provider fails 5% 
+          and answers 429 for 5% of calls (`PROVIDER_ERROR_RATE`, `PROVID
+          ER_TOO_MANY_RATE` in `.env`) so retries and the rate limit can 
+          be seen working.
+      21  - **TR:** Varsayılan model `claude-sonnet-5-5`. Mock LLM şehir,
+           dil (İngilizce), cinsiyet, yaş (aralık, üstü, altı), cart_add 
+          / purchase / page_view ve "son N gün" ifadelerini anlar; daha i
+          nce ifadeler gerçek key ister. Mock provider çağrıların %5'inde
+           hata, %5'inde 429 döner (`.env` içinde `PROVIDER_ERROR_RATE`, 
+          `PROVIDER_TOO_MANY_RATE`); böylece retry ve rate limit çalışırk
+          en görülebilir.
+      22  
+      23 +## Example briefs / Örnek brief'ler                            
+      24 +                                                               
+      25 +**EN:** These work in mock mode and each finds a different audi
+         +ence (the first one is the case's own example). With a real key
+         +, free wording works too.                                      
+      26 +                                                               
+      27 +**TR:** Bunlar mock modda çalışır ve her biri farklı bir kitle 
+         +bulur (ilki case'in kendi örneği). Gerçek key ile serbest ifade
+         + de çalışır.                                                   
+      28 +                                                               
+      29 +1. `Son 30 günde sepetine ürün ekleyip alışveriş yapmayan İstan
+         +bul'daki kullanıcılara %30 indirim hatırlatması gönder. Samimi 
+         +ama kısa olsun.` (city + cart_add + no purchase)               
+      30 +2. `Ankara'daki 25 yaş altı kadınlara yeni sezon ürünlerini duy
+         +ur.` (city + gender + age < 25)                                
+      31 +3. `Son 7 günde alışveriş yapan İzmir'deki erkeklere teşekkür m
+         +esajı gönder.` (city + gender + purchase)                      
+      32 +4. `Sepetine ürün ekleyen 18-24 yaş arası kullanıcılara öğrenci
+         + indirimi duyur.` (age range + cart_add)                       
+      33 +5. `Thank English-speaking women over 40 years old who made a p
+         +urchase in the last 60 days.` (language + gender + age >= 40 + 
+         +purchase)                                                      
+      34 +                                                               
+      35  ## Architecture / Mimari
+      36  
+      37  ```
+
+● Update(README.md)
+  ⎿  Added 2 lines, removed 2 lines
+      50  
+      51  ## Known limits / Bilinen sınırlar
+      52  
+      53 -- **EN:** `language` has no value whitelist (an unknown value g
+         -ives an empty audience). The mock LLM ignores age and gender. `
+         -POST /audience/preview` is single-channel and not used by the U
+         -I. Backend error messages are English in the Turkish UI.       
+      54 -- **TR:** `language` için değer whitelist'i yok (bilinmeyen değ
+         -er boş kitle verir). Mock LLM yaş ve cinsiyeti yok sayar. `POST
+         - /audience/preview` tek kanallıdır ve arayüz kullanmaz. Backend
+         - hata mesajları Türkçe arayüzde İngilizcedir.                  
+      53 +- **EN:** `POST /audience/preview` is single-channel and not us
+         +ed by the UI. Backend error messages are English in the Turkish
+         + UI. The mock LLM matches keywords only, so a brief outside tho
+         +se patterns falls back to "active in the last N days".         
+      54 +- **TR:** `POST /audience/preview` tek kanallıdır ve arayüz kul
+         +lanmaz. Backend hata mesajları Türkçe arayüzde İngilizcedir. Mo
+         +ck LLM yalnızca anahtar kelimeleri eşler; bu kalıpların dışında
+         +ki brief "son N günde aktif" kitlesine düşer.                  
+      55  
+      56  ## Tests / Testler
+      57  
+
+● Şimdi DECISIONS: #6 (lookup), #15 (reconciler) ve #1 (kapalı değer kümeleri).
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      30  
+      31  ## 6. How do we make sure nobody gets the same message twice? /
+           Aynı kişiye aynı mesaj iki kez gitmesi nasıl engellenir?
+      32  
+      33 -- **EN:** `UNIQUE(campaign_id, user_id, channel)` in Postgres p
+         -lus an idempotency key sent to the provider. The guarantee come
+         -s from the database, so it holds when a worker crashes or a tas
+         -k is enqueued twice. If the provider call succeeds but saving `
+         -sent` fails, the retry reuses the same idempotency key, so the 
+         -provider deduplicates.                                         
+      33 +- **EN:** `UNIQUE(campaign_id, user_id, channel)` in Postgres p
+         +lus an idempotency key sent to the provider. The guarantee come
+         +s from the database, so it holds when a worker crashes or a tas
+         +k is enqueued twice. The key alone stops duplicates, but not a 
+         +wrong status: if the provider delivered and we never saw the an
+         +swer (lost response, `MarkSent` failing, a crash), the message 
+         +could still end as `failed`. So the provider also exposes `GET 
+         +/messages/{key}` (200 with the id if delivered, 404 if not). Be
+         +fore resending an earlier-attempted message, and before writing
+         + `failed`, the worker asks it and records `sent` with the provi
+         +der's id when it was delivered; the reconciler does the same fo
+         +r archived tasks. If the lookup itself fails, the worker just s
+         +ends (the key still dedupes) and the reconciler waits for its n
+         +ext run. The mock provider keeps keys in memory; a real one wou
+         +ld keep them for a limited time (typically about 24 hours), whi
+         +ch is the window this protection covers.                       
+      34  - **TR:** Postgres'te `UNIQUE(campaign_id, user_id, channel)` v
+          e provider'a gönderilen idempotency key. Garanti veritabanından
+           geldiği için worker çökse ya da görev iki kez kuyruğa girse de
+           geçerlidir. Provider çağrısı başarılı olup `sent` kaydı başarı
+          sız olursa tekrar deneme aynı idempotency key'i kullanır; provi
+          der tekrarı eler.
+      35  
+      36  ## 7. How do we handle failures and the 100 msg/s limit? / Hata
+          lar ve saniyede 100 mesaj limiti nasıl yönetilir?
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      31  ## 6. How do we make sure nobody gets the same message twice? /
+           Aynı kişiye aynı mesaj iki kez gitmesi nasıl engellenir?
+      32  
+      33  - **EN:** `UNIQUE(campaign_id, user_id, channel)` in Postgres p
+          lus an idempotency key sent to the provider. The guarantee come
+          s from the database, so it holds when a worker crashes or a tas
+          k is enqueued twice. The key alone stops duplicates, but not a 
+          wrong status: if the provider delivered and we never saw the an
+          swer (lost response, `MarkSent` failing, a crash), the message 
+          could still end as `failed`. So the provider also exposes `GET 
+          /messages/{key}` (200 with the id if delivered, 404 if not). Be
+          fore resending an earlier-attempted message, and before writing
+           `failed`, the worker asks it and records `sent` with the provi
+          der's id when it was delivered; the reconciler does the same fo
+          r archived tasks. If the lookup itself fails, the worker just s
+          ends (the key still dedupes) and the reconciler waits for its n
+          ext run. The mock provider keeps keys in memory; a real one wou
+          ld keep them for a limited time (typically about 24 hours), whi
+          ch is the window this protection covers.
+      34 -- **TR:** Postgres'te `UNIQUE(campaign_id, user_id, channel)` v
+         -e provider'a gönderilen idempotency key. Garanti veritabanından
+         - geldiği için worker çökse ya da görev iki kez kuyruğa girse de
+         - geçerlidir. Provider çağrısı başarılı olup `sent` kaydı başarı
+         -sız olursa tekrar deneme aynı idempotency key'i kullanır; provi
+         -der tekrarı eler.                                              
+      34 +- **TR:** Postgres'te `UNIQUE(campaign_id, user_id, channel)` v
+         +e provider'a gönderilen idempotency key. Garanti veritabanından
+         + geldiği için worker çökse ya da görev iki kez kuyruğa girse de
+         + geçerlidir. Key tek başına tekrarı engeller ama yanlış durumu 
+         +engellemez: provider teslim etmiş ve biz cevabı görmemişsek (ka
+         +ybolan yanıt, `MarkSent` hatası, çökme) mesaj yine de `failed` 
+         +kalabilir. Bu yüzden provider ayrıca `GET /messages/{key}` suna
+         +r (teslim edildiyse id ile 200, edilmediyse 404). Daha önce den
+         +enmiş bir mesajı yeniden göndermeden önce ve `failed` yazmadan 
+         +önce worker oraya sorar; teslim edilmişse provider'ın id'siyle 
+         +`sent` yazar. Reconciler archive'daki görevler için aynısını ya
+         +par. Sorgunun kendisi hata verirse worker yine gönderir (key te
+         +krarı yine eler), reconciler bir sonraki çalışmayı bekler. Mock
+         + provider key'leri bellekte tutar; gerçek bir provider sınırlı 
+         +süre (genelde yaklaşık 24 saat) tutar ve bu koruma o pencereyi 
+         +kapsar.                                                        
+      35  
+      36  ## 7. How do we handle failures and the 100 msg/s limit? / Hata
+          lar ve saniyede 100 mesaj limiti nasıl yönetilir?
+      37  
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      75  
+      76  ## 15. How do the queue and worker stay correct under load and 
+          failure? / Kuyruk ve worker yük ve hata altında nasıl doğru kal
+          ır?
+      77  
+      78 -- **EN:** Each channel has its own Asynq queue (`sms`, `email`)
+         -, so a large SMS backlog waiting on its 100 msg/s token cannot 
+         -hold email back; `default` only carries scheduled-campaign task
+         -s. Consent is checked at fan-out and again just before delivery
+         -, because it can be withdrawn in between: such a message become
+         -s `failed` and the provider is never called. Asynq archives a t
+         -ask after its last attempt whatever the error, so the last atte
+         -mpt of an infrastructure error (Redis, database) also marks the
+         - message `failed`; otherwise it would stay pending and the camp
+         -aign would never complete. A cancelled context (shutdown) is no
+         -t counted as a failure, because Asynq puts that task back. Only
+         - a message that no longer exists skips retries. Backoff is inde
+         -xed by Asynq's retry count, which is 0 after the first failure,
+         - so the waits are 1, 2, 4, 8 seconds. If the database is down t
+         -hrough the last attempt, a reconciler in the worker (every 30 s
+         -) lists the archived `sms`/`email` tasks and marks their still-
+         -pending messages `failed`; enqueueing again would not help beca
+         -use Asynq keeps an archived task's id.                         
+      78 +- **EN:** Each channel has its own Asynq queue (`sms`, `email`)
+         +, so a large SMS backlog waiting on its 100 msg/s token cannot 
+         +hold email back; `default` only carries scheduled-campaign task
+         +s. Consent is checked at fan-out and again just before delivery
+         +, because it can be withdrawn in between: such a message become
+         +s `failed` and the provider is never called. Asynq archives a t
+         +ask after its last attempt whatever the error, so the last atte
+         +mpt of an infrastructure error (Redis, database) also marks the
+         + message `failed`; otherwise it would stay pending and the camp
+         +aign would never complete. A cancelled context (shutdown) is no
+         +t counted as a failure, because Asynq puts that task back. Only
+         + a message that no longer exists skips retries. Backoff is inde
+         +xed by Asynq's retry count, which is 0 after the first failure,
+         + so the waits are 1, 2, 4, 8 seconds. If the database is down t
+         +hrough the last attempt, a reconciler in the worker (every 30 s
+         +) takes the open messages (`pending`/`retrying`, untouched for 
+         +a minute, oldest 500 per run, served by a partial index), check
+         +s whether Asynq archived their task, and settles those with the
+         + provider lookup from decision 6: delivered means `sent`, other
+         +wise `failed`. It reads open messages instead of scanning the a
+         +rchive, so its cost follows the number of stuck messages, not t
+         +he archive size. Enqueueing again would not help because Asynq 
+         +keeps an archived task's id.                                   
+      79  - **TR:** Her kanalın kendi Asynq kuyruğu vardır (`sms`, `email
+          `); böylece 100 msg/s token'ını bekleyen büyük bir SMS birikimi
+           email'i geride tutamaz. `default` kuyruğu yalnızca zamanlanmış
+           kampanya görevlerini taşır. İzin hem fan-out'ta hem teslimatta
+          n hemen önce kontrol edilir, çünkü arada geri çekilebilir: böyl
+          e bir mesaj `failed` olur ve provider hiç çağrılmaz. Asynq, hat
+          a ne olursa olsun son denemeden sonra görevi archive'a alır; bu
+           yüzden altyapı hatasının (Redis, veritabanı) son denemesi de m
+          esajı `failed` yapar, yoksa mesaj pending kalır ve kampanya hiç
+           tamamlanmaz. İptal edilmiş context (kapanış) başarısızlık sayı
+          lmaz, çünkü Asynq o görevi geri koyar. Yalnızca artık var olmay
+          an mesaj tekrar denenmez. Backoff, Asynq'in ilk hatadan sonra 0
+           olan retry sayacına göre indekslenir; bekleme süreleri 1, 2, 4
+          , 8 saniyedir. Veritabanı son denemeye kadar kapalı kalırsa wor
+          ker'daki reconciler (30 sn'de bir) `sms`/`email` archive'ındaki
+           görevleri listeler ve hâlâ pending olan mesajları `failed` yap
+          ar; yeniden kuyruğa atmak işe yaramaz, çünkü Asynq archive'daki
+           görevin id'sini tutar.
+      80  
+      81  ## 16. Which model? / Hangi model?
+
+● Update(docs\DECISIONS.md)
+  ⎿  Error editing file
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+       5  
+       6  ## 1. How do we keep LLM output away from the database? / LLM ç
+          ıktısı veritabanından nasıl uzak tutulur?
+       7  
+       8 -- **EN:** The LLM returns only a JSON segment rule. Go validate
+         -s it against whitelists (fields, operators, events, value types
+         -, nesting depth <= 3, <= 20 conditions) and builds parameterize
+         -d SQL from fixed fragments; values always go through `$n` param
+         -eters. The LLM never writes SQL.                               
+       8 +- **EN:** The LLM returns only a JSON segment rule. Go validate
+         +s it against whitelists (fields, operators, events, value types
+         +, nesting depth <= 3, <= 20 conditions) and builds parameterize
+         +d SQL from fixed fragments; values always go through `$n` param
+         +eters. The LLM never writes SQL. Text fields with a closed set 
+         +of values (`gender`: male/female, `language`: tr/en) are checke
+         +d against that set too, because an unknown value such as "erkek
+         +" or "de" would silently match nobody; the same set is a CHECK 
+         +in the database and is written into the LLM prompt.            
+       9  - **TR:** LLM sadece JSON segment kuralı döndürür. Go kuralı wh
+          itelist'lere göre doğrular (alan, operatör, olay, değer tipi, i
+          ç içe en fazla 3 seviye, en fazla 20 koşul) ve sabit SQL parçal
+          arından parametreli sorgu üretir; değerler her zaman `$n` param
+          etresiyle gider. LLM hiçbir zaman SQL yazmaz.
+      10  
+      11  ## 2. How do we get reliable JSON from Claude? / Claude'dan güv
+          enilir JSON nasıl alınır?
+
+● TR #15 metni "Veritabanı" diye büyük harfle başlıyormuş. Onu düzeltip #1'in TR
+  karşılığını da ekliyorum.
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      76  ## 15. How do the queue and worker stay correct under load and 
+          failure? / Kuyruk ve worker yük ve hata altında nasıl doğru kal
+          ır?
+      77  
+      78  - **EN:** Each channel has its own Asynq queue (`sms`, `email`)
+          , so a large SMS backlog waiting on its 100 msg/s token cannot 
+          hold email back; `default` only carries scheduled-campaign task
+          s. Consent is checked at fan-out and again just before delivery
+          , because it can be withdrawn in between: such a message become
+          s `failed` and the provider is never called. Asynq archives a t
+          ask after its last attempt whatever the error, so the last atte
+          mpt of an infrastructure error (Redis, database) also marks the
+           message `failed`; otherwise it would stay pending and the camp
+          aign would never complete. A cancelled context (shutdown) is no
+          t counted as a failure, because Asynq puts that task back. Only
+           a message that no longer exists skips retries. Backoff is inde
+          xed by Asynq's retry count, which is 0 after the first failure,
+           so the waits are 1, 2, 4, 8 seconds. If the database is down t
+          hrough the last attempt, a reconciler in the worker (every 30 s
+          ) takes the open messages (`pending`/`retrying`, untouched for 
+          a minute, oldest 500 per run, served by a partial index), check
+          s whether Asynq archived their task, and settles those with the
+           provider lookup from decision 6: delivered means `sent`, other
+          wise `failed`. It reads open messages instead of scanning the a
+          rchive, so its cost follows the number of stuck messages, not t
+          he archive size. Enqueueing again would not help because Asynq 
+          keeps an archived task's id.
+      79 -- **TR:** Her kanalın kendi Asynq kuyruğu vardır (`sms`, `email
+         -`); böylece 100 msg/s token'ını bekleyen büyük bir SMS birikimi
+         - email'i geride tutamaz. `default` kuyruğu yalnızca zamanlanmış
+         - kampanya görevlerini taşır. İzin hem fan-out'ta hem teslimatta
+         -n hemen önce kontrol edilir, çünkü arada geri çekilebilir: böyl
+         -e bir mesaj `failed` olur ve provider hiç çağrılmaz. Asynq, hat
+         -a ne olursa olsun son denemeden sonra görevi archive'a alır; bu
+         - yüzden altyapı hatasının (Redis, veritabanı) son denemesi de m
+         -esajı `failed` yapar, yoksa mesaj pending kalır ve kampanya hiç
+         - tamamlanmaz. İptal edilmiş context (kapanış) başarısızlık sayı
+         -lmaz, çünkü Asynq o görevi geri koyar. Yalnızca artık var olmay
+         -an mesaj tekrar denenmez. Backoff, Asynq'in ilk hatadan sonra 0
+         - olan retry sayacına göre indekslenir; bekleme süreleri 1, 2, 4
+         -, 8 saniyedir. Veritabanı son denemeye kadar kapalı kalırsa wor
+         -ker'daki reconciler (30 sn'de bir) `sms`/`email` archive'ındaki
+         - görevleri listeler ve hâlâ pending olan mesajları `failed` yap
+         -ar; yeniden kuyruğa atmak işe yaramaz, çünkü Asynq archive'daki
+         - görevin id'sini tutar.                                        
+      79 +- **TR:** Her kanalın kendi Asynq kuyruğu vardır (`sms`, `email
+         +`); böylece 100 msg/s token'ını bekleyen büyük bir SMS birikimi
+         + email'i geride tutamaz. `default` kuyruğu yalnızca zamanlanmış
+         + kampanya görevlerini taşır. İzin hem fan-out'ta hem teslimatta
+         +n hemen önce kontrol edilir, çünkü arada geri çekilebilir: böyl
+         +e bir mesaj `failed` olur ve provider hiç çağrılmaz. Asynq, hat
+         +a ne olursa olsun son denemeden sonra görevi archive'a alır; bu
+         + yüzden altyapı hatasının (Redis, veritabanı) son denemesi de m
+         +esajı `failed` yapar, yoksa mesaj pending kalır ve kampanya hiç
+         + tamamlanmaz. İptal edilmiş context (kapanış) başarısızlık sayı
+         +lmaz, çünkü Asynq o görevi geri koyar. Yalnızca artık var olmay
+         +an mesaj tekrar denenmez. Backoff, Asynq'in ilk hatadan sonra 0
+         + olan retry sayacına göre indekslenir; bekleme süreleri 1, 2, 4
+         +, 8 saniyedir. Veritabanı son denemeye kadar kapalı kalırsa wor
+         +ker'daki reconciler (30 sn'de bir) açık mesajları (`pending`/`r
+         +etrying`, bir dakikadır dokunulmamış, çalışma başına en eski 50
+         +0, kısmi index ile) alır, görevlerinin Asynq tarafından archive
+         +'a alınıp alınmadığına bakar ve bunları 6. kararın provider sor
+         +gusuyla sonuçlandırır: teslim edilmişse `sent`, değilse `failed
+         +`. Archive'ı taramak yerine açık mesajları okur; maliyeti archi
+         +ve boyutuna değil takılan mesaj sayısına bağlıdır. Yeniden kuyr
+         +uğa atmak işe yaramaz, çünkü Asynq archive'daki görevin id'sini
+         + tutar.                                                        
+      80  
+      81  ## 16. Which model? / Hangi model?
+      82  
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+       6  ## 1. How do we keep LLM output away from the database? / LLM ç
+          ıktısı veritabanından nasıl uzak tutulur?
+       7  
+       8  - **EN:** The LLM returns only a JSON segment rule. Go validate
+          s it against whitelists (fields, operators, events, value types
+          , nesting depth <= 3, <= 20 conditions) and builds parameterize
+          d SQL from fixed fragments; values always go through `$n` param
+          eters. The LLM never writes SQL. Text fields with a closed set 
+          of values (`gender`: male/female, `language`: tr/en) are checke
+          d against that set too, because an unknown value such as "erkek
+          " or "de" would silently match nobody; the same set is a CHECK 
+          in the database and is written into the LLM prompt.
+       9 -- **TR:** LLM sadece JSON segment kuralı döndürür. Go kuralı wh
+         -itelist'lere göre doğrular (alan, operatör, olay, değer tipi, i
+         -ç içe en fazla 3 seviye, en fazla 20 koşul) ve sabit SQL parçal
+         -arından parametreli sorgu üretir; değerler her zaman `$n` param
+         -etresiyle gider. LLM hiçbir zaman SQL yazmaz.                  
+       9 +- **TR:** LLM sadece JSON segment kuralı döndürür. Go kuralı wh
+         +itelist'lere göre doğrular (alan, operatör, olay, değer tipi, i
+         +ç içe en fazla 3 seviye, en fazla 20 koşul) ve sabit SQL parçal
+         +arından parametreli sorgu üretir; değerler her zaman `$n` param
+         +etresiyle gider. LLM hiçbir zaman SQL yazmaz. Kapalı değer küme
+         +si olan metin alanları (`gender`: male/female, `language`: tr/e
+         +n) da bu kümeye karşı denetlenir, çünkü "erkek" ya da "de" gibi
+         + bilinmeyen bir değer sessizce kimseyle eşleşmezdi; aynı küme v
+         +eritabanında CHECK olarak ve LLM prompt'unda da yer alır.      
+      10  
+      11  ## 2. How do we get reliable JSON from Claude? / Claude'dan güv
+          enilir JSON nasıl alınır?
+      12  
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Yığın ayakta. Uçtan uca akış için API istek gövdelerine bakıyorum.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Akış: suggest, audience, content, approve, send. Beş brief için hepsini
+  otomatik koşan bir betik yazıyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Tek çağrı çalışıyor: kural doğru (şehir, kadın, yaş < 25). Şimdi beş brief'in
+  tamamı için akışı sonuna kadar koşan betik.
+
+● Write(~\AppData\Local\Temp\claude\C--Users-<user>-Desktop-insider-case\89831472
+       -626e-4190-9c1c-d786477c3475\scratchpad\e2e.py)
+  ⎿  Wrote 57 lines to ~\AppData\Local\Temp\claude\C--Users-<user>-Desktop-i
+     nsider-case\89831472-626e-4190-9c1c-d786477c3475\scratchpad\e2e.py
+       1 import json, sys, time, urllib.request
+       2 
+       3 API = "http://localhost:8080"
+       4 BRIEFS = [
+       5     "Son 30 günde sepetine ürün ekleyip alışveriş yapmayan İstan
+         bul'daki kullanıcılara %30 indirim hatırlatması gönder. Samimi a
+         ma kısa olsun.",
+       6     "Ankara'daki 25 yaş altı kadınlara yeni sezon ürünlerini duy
+         ur.",
+       7     "Son 7 günde alışveriş yapan İzmir'deki erkeklere teşekkür m
+     … +51 lines (~2 KB) (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● -I ortam değişkenlerini yok sayıyor. UTF-8 modunu -X utf8 ile açıyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Beş akış da tamamlandı ve hepsi sent. Sayıların ve retry'ların gerçek olduğunu
+  /metrics ile, ayrıca worker ve provider loglarından kontrol ediyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Provider hiçbir saniyede 100 isteği aşmadı; 990 mesaj için 1088 deneme yapıldı
+  ve enjekte edilen hatalar retry ile telafi edildi. Şimdi planın tarayıcı
+  adımına geçip bir brief'i arayüzden baştan sona test edeceğim. · summary
+
+  Called claude-in-chrome 3 times (ctrl+o to expand)
+
+● Arayüz açıldı. Brief alanına 2. örnek brief'i yazıp gönderiyorum.
+
+  Called claude-in-chrome 3 times (ctrl+o to expand)
+
+● Sadece SMS seçili. E-postayı da seçip A/B'yi açıyorum, sonra "Kitle öner" ile
+  devam ediyorum.
+
+  Called claude-in-chrome 3 times (ctrl+o to expand)
+● Kitle ekranı kuralı doğru gösteriyor: Ankara, kadın, yaş < 25, 28 SMS ve 33
+  e-posta. Kitleyi kullanıp mesaj üretimine geçiyorum.
+
+  Called claude-in-chrome 3 times (ctrl+o to expand)
+
+● "Metni yaz" düğmesine basıp stream'in tamamlanmasını bekliyorum.
+
+  Called claude-in-chrome 3 times (ctrl+o to expand)
+
+● Metin üretildi (SMS 67/160, sayaç çalışıyor). Aşağıdaki onay ve gönderim
+  düğmesini bulup devam ediyorum.
+
+  Called claude-in-chrome 3 times (ctrl+o to expand)
+
+● E-posta konusu ve gövdesi de limit içinde. Bu, sahte kullanıcılara ve mock
+  provider'a giden bir gönderim, o yüzden "Onayla ve gönder"e basıyorum.
+
+  Called claude-in-chrome 3 times (ctrl+o to expand)
+
+● Dashboard canlı çalışıyor: 61 mesajdan 60'ı gönderilmiş, 1'i provider hatası
+  yüzünden yeniden deneniyor. Tamamlanmasını bekleyip son durumu alıyorum.
+
+  Called claude-in-chrome 2 times (ctrl+o to expand)
+
+● Arayüzde akış %100 ile bitti: 61 mesajın 61'i gönderildi. Planın kalan adımı
+  frontend testleri.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Sekiz maddeyi de tamamladım ve uçtan uca denedim. Backend testleri (make 
+  test'in içindeki Docker komutu) ve frontend testleri (32) geçiyor. Hiçbir şeyi
+  commit etmedim.
+
+  Yapılanlar
+  1. Mock LLM yaş ve cinsiyet: gender, yaş aralığı, "X yaş üstü/altı",
+     "over/under X years old" anlaşılıyor. "Kadın ve erkek" birlikte geçerse
+     cinsiyet eklenmiyor. "%30" ya da "30 gün" yaş sayılmıyor. README'ye 5 örnek
+     brief ekledim, ilki case'in kendi örneği.
+  2. Language whitelist: tr/en kümesi hem doğrulayıcıda, hem prompt'ta hem de
+     yeni 005_language_check.sql migration'ındaki CHECK'te.
+  3. Reconciler: Arşivi taramıyor. Bir dakikadır dokunulmamış açık mesajlara (en
+     eski 500) bakıyor ve bunları kısmi index ile buluyor.
+  4. MarkSent / idempotency:
+     - Mock provider'a GET /messages/{key} ekledim: teslim edildiyse 200 ve id,
+       edilmediyse 404.
+     - Worker, daha önce denenmiş bir mesajı göndermeden önce ve failed yazmadan
+       önce oraya soruyor. Teslim edilmişse sent yazıyor.
+     - Reconciler arşivlenmiş görevler için de aynısını yapıyor.
+     - Sorgu hata verirse worker yine gönderiyor, reconciler bir sonraki tura
+       bırakıyor.
+     - Soruna cevap: provider key ile tekrarı zaten engelliyordu, ama teslim
+       edilip kaydedilemeyen mesaj failed kalabiliyordu. Yeni sorgu bunu
+       kapatıyor. Altı yeni test yazdım (sender testlerinde 5 senaryo + provider
+       Lookup testi) ve DECISIONS #6 ile #15'e ekledim.
+     - Ek not: Plan dosyasındaki madde 4 hâlâ "kod değişikliği yok" diyordu
+       çünkü o düzenleme tutmamıştı. Senin reddetme notundaki talimata uydum.
+  5. Docs: README (örnek brief'ler, mock açıklaması, bilinen sınırlar) ile
+     DECISIONS #1, #6, #15 güncellendi. Yaş/cinsiyet ve language sınırı artık
+     bilinen sınır değil.
+
+  Uçtan uca sonuçlar
+  - Beş brief de API üzerinden tamamlandı: 990 mesajın tamamı sent. Provider
+    hiçbir saniyede 100'ü aşmadı (en yüksek 91).
+  - 1088 deneme yapılmış, yani yaklaşık 100 retry var. Enjekte edilen hata ve
+    429'lar böyle telafi edilmiş.
+  - Brief 2'yi arayüzden de baştan sona geçirdim: kural doğru gösterildi,
+    metinler limit içinde, dashboard canlı güncellendi ve 61/61 gönderildi.
+  - E2E öncesi docker compose down -v ile yerel veritabanını sıfırladım. Yeni
+    CHECK için gerekliydi.
+
+  Bilmen gerekenler
+  - migrations_test.go sürüm sayısını (4) sabit tutuyordu, 5'e çektim.
+  - Limiter testi bu sefer "busiest second 101" logladı. Testin kendi toleransı
+    105, yani sorun yok.
+  - Brief 4 örneğini "siteyi ziyaret eden"den "sepetine ürün ekleyen"e çevirdim,
+    çünkü mock "ziyaret"i tanımıyor.
+  - Bu konuşmanın export'unu sen alacaksın. CI'ın yeşil olduğunu commit ve
+    push'tan sonra göreceğiz.
+
+  Commit için "Add provider lookup, language whitelist and age/gender to mock"
+  gibi tek mesaj mı, yoksa konuya göre bölünmüş birkaç küçük commit mi istersin?
+
+✻ Worked for 20m 51s · done Saturday 11:23 PM
+
+❯ [Image #4] bu resim sana yeter mi yok ben illa görecem mi diyorsun :D         
+  ⎿  [Image #4]
+
+● Evet, resim yeter. CI'ın yeşil olduğunu bundan görebiliyorum.
+
+  - Yeşil olan: #16'dan #25'e kadar görünen 10 run'ın hepsi başarılı. En yenisi,
+    f0ff8ca commit'indeki #25 ("Add sanitized session8 session export"). Lint,
+    -race testleri, govulncheck ve docker compose build dahil.
+  - Henüz kapsamda olmayan: Bu yeşil, bu oturumdaki değişiklikleri kapsamıyor.
+    Mock LLM yaş ve cinsiyeti, language whitelist, provider lookup, reconciler
+    değişikliği ve 005 migration henüz commit'lenmedi. Onların CI sonucunu ancak
+    commit ve push'tan sonra görebiliriz.
+  - Yeni risk: Yeni kod golangci-lint ve govulncheck adımlarından geçmedi.
+    Yerelde sadece testleri koşturdum. Bu adımlar push'tan sonra ilk kez
+    çalışacak.
+
+  Commit ve push'u sen istersen yaparım. Mesaj önerim: "Add provider lookup,
+  language whitelist and age/gender to mock". İstersen konuya göre 3-4 küçük
+  commit'e de bölerim.
+
+✻ Baked for 6s · done Saturday 11:27 PM
+
+❯ commit push öncesinde ne yapıcaz ? tekrar puanlama yapacaksın :D              
+
+● Önce CI'ın push'ta çalıştıracağı kontrolleri yerelde koşturuyorum (gofmt, vet,
+  tidy, lint, vuln), sonra puanlamayı yapacağım.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● gofmt, vet, tidy ve govulncheck temiz. golangci-lint yerelde kurulu değil,
+  CI'daki aracı Docker ile deniyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Commit öncesi kontrollerin hepsi temiz: gofmt, go vet, go mod tidy,
+  govulncheck ve golangci-lint (0 issue). Gizli bilgi taraması da temiz. -race
+  ile testi yerelde ayrıca koşturmadım, o CI'da çalışacak.
+
+  Yeniden puanlama
+
+  ┌───────────────────────┬─────────┬────────┬───────┐
+  │        Kriter         │ Ağırlık │ Önceki │ Şimdi │
+  ├───────────────────────┼─────────┼────────┼───────┤
+  │ LLM entegrasyonu      │ 25      │ 22     │ 23    │
+  ├───────────────────────┼─────────┼────────┼───────┤
+  │ Mimari ve kararlar    │ 20      │ 18     │ 19    │
+  ├───────────────────────┼─────────┼────────┼───────┤
+  │ Backend güvenilirliği │ 20      │ 17     │ 18    │
+  ├───────────────────────┼─────────┼────────┼───────┤
+  │ Frontend              │ 20      │ 16     │ 17    │
+  ├───────────────────────┼─────────┼────────┼───────┤
+  │ Test ve kod kalitesi  │ 15      │ 13     │ 14    │
+  ├───────────────────────┼─────────┼────────┼───────┤
+  │ Toplam                │ 100     │ 86     │ 91    │
+  └───────────────────────┴─────────┴────────┴───────┘
+
+  Neden arttı
+  - LLM (+1): Mock artık yaş ve cinsiyeti anlıyor. Language değerleri
+    doğrulayıcıda, prompt'ta ve veritabanında aynı kümeden geliyor.
+  - Mimari (+1): DECISIONS'ta kararlar ve gerekçeleri güncel. Eski "eklenmedi"
+    notları gitti.
+  - Backend (+1):
+    - Teslim edilip kaydedilemeyen mesaj artık failed kalmıyor, provider'a
+      sorulup sent yazılıyor.
+    - Reconciler'ın maliyeti archive boyutuna değil, takılan mesaj sayısına
+      bağlı.
+    - Beş brief de uçtan uca tamamlandı: 990 mesajın tamamı sent, provider
+      limiti hiç aşılmadı.
+  - Frontend (+1): Bir akış arayüzden gerçekten baştan sona doğrulandı.
+  - Test (+1): Lookup, reconciler ve mock için yeni testler eklendi. Lint
+    yerelde de temiz.
+
+  Puanı tutan şeyler
+  - Gerçek key yok: Gerçek Anthropic ile hiç çalıştırılmadı. LLM'de kalan 2
+    puanın nedeni bu.
+  - Provider varsayımı: Lookup, provider'ın GET /messages/{key} sunduğunu
+    varsayıyor. Bunu biz yazdığımız mock'ta sağlıyoruz, gerçek bir provider'da
+    olmayabilir. DECISIONS'ta bunun mock'a özgü olduğunu yazdım ama sınırı orada
+    kalıyor.
+  - Arayüz: Yalnızca TR/koyu tema akışı denendi. EN dili, açık tema ve
+    zamanlanmış durum gözle kontrol edilmedi. (Mobil kararına göre kapsam dışı.)
+  - Test: Otomatik uçtan uca test yok, e2e'yi elle betikle yaptım.
+  - Reconciler: Görevi Redis'ten hiç kaybolmuş bir mesajı yine görmez. Küçük bir
+    PoC için kabul edilebilir.
+
+  Commit ve push'a hazırız. Tek commit mi, yoksa konuya göre 3-4 küçük commit mi
+  istersin? Ben bölmeyi öneririm: language whitelist, mock yaş/cinsiyet,
+  provider lookup ile reconciler, docs. session9 export'unu her zamanki gibi
+  ayrıca sen alırsın.
+
+✻ Crunched for 2m 6s · done Saturday 11:29 PM
+
+❯ commit push                                                                   
+
+● Önerdiğim gibi konuya göre dört küçük commit atıp push ediyorum.
+
+  Pushed to main (ctrl+o to expand)
+
+● Push tamam. CI'ın bu dört commit'i nasıl karşıladığını izliyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● test işi geçti. Genel sonucu ve lint işini de doğruluyorum.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Dört commit'i push ettim ve CI yeşil. Son commit olan 0c694ea için lint ve
+  test işlerinin ikisi de başarılı. test işi make test ve docker compose build
+  adımlarını da kapsıyor. Bu, -race, golangci-lint ve govulncheck'in yeni kodda
+  ilk kez çalışması demek.
+
+  Commit'ler sırayla şunlar:
+  1. 97f5226 Whitelist language values
+  2. dce51bb Teach the mock LLM age and gender
+  3. 4601710 Ask the provider before failing a message, scan only open messages
+  4. 0c694ea Document example briefs, provider lookup and the reconciler
+
+  Kalan tek iş bu oturumun export'u. Onu her zamanki gibi sen /export ile
+  alırsın, sonra /ship-session 09-docs ile temizleyip eklersin. Pre-commit
+  hook'u sızıntı kontrolünü zaten yapıyor.
+
+✻ Brewed for 8m 9s · done Saturday 11:50 PM
+
+❯ projenin son durumu ile verilen kararları (desicion.md içindeki) ve readme    
+  içindeki açıklamaları gözden geçir tutarsızlık olmasın                        
+
+● İki dokümanı baştan sona okuyup her iddiayı koda karşı kontrol ediyorum.
+  Read 2 files, ran 1 shell command (ctrl+o to expand)
+
+● Birkaç tutarsızlık fark ettim; şimdi test.sh içindeki -race bayrağını,
+  plan.md'deki eski ifadeleri ve limit ayarlarının .env.example karşılıklarını
+  kontrol edeceğim. · summary
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Tutarsızlıkları buldum, hepsini düzeltiyorum. plan.md bir başlangıç planı
+  olduğu için ona dokunmuyorum.
+
+● Update(README.md)
+  ⎿  Added 1 line, removed 1 line
+      1  # Smart Campaign Composer
+      2  
+      3 -**EN:** A marketer writes a campaign brief in plain language. Cl
+        -aude turns it into an audience rule and SMS/email copy, a human 
+        -reviews and approves, messages go through a queue to a mock prov
+        -ider, and a dashboard shows delivery live. Bonuses: scheduling, 
+        -A/B test, multi-language copy.                                  
+      3 +**EN:** A marketer writes a campaign brief in plain language. Cl
+        +aude turns it into an audience rule and SMS/email copy, a human 
+        +reviews and approves, messages go through a queue to a mock prov
+        +ider, and a dashboard shows delivery live. Bonuses: scheduling, 
+        +A/B test, multi-language copy, CI pipeline.                     
+      4  
+      5  **TR:** Pazarlamacı kampanya brief'ini düz yazıyla yazar. Claude
+          bunu kitle kuralına ve SMS/e-posta metnine çevirir, bir insan i
+         nceleyip onaylar, mesajlar kuyruktan sahte bir provider'a gider 
+         ve dashboard teslimatı canlı gösterir. Bonuslar: zamanlama, A/B 
+         testi, çok dilli metin.
+      6  
+
+● Update(README.md)
+  ⎿  Added 1 line, removed 1 line
+      2  
+      3  **EN:** A marketer writes a campaign brief in plain language. Cl
+         aude turns it into an audience rule and SMS/email copy, a human 
+         reviews and approves, messages go through a queue to a mock prov
+         ider, and a dashboard shows delivery live. Bonuses: scheduling, 
+         A/B test, multi-language copy, CI pipeline.
+      4  
+      5 -**TR:** Pazarlamacı kampanya brief'ini düz yazıyla yazar. Claude
+        - bunu kitle kuralına ve SMS/e-posta metnine çevirir, bir insan i
+        -nceleyip onaylar, mesajlar kuyruktan sahte bir provider'a gider 
+        -ve dashboard teslimatı canlı gösterir. Bonuslar: zamanlama, A/B 
+        -testi, çok dilli metin.                                         
+      5 +**TR:** Pazarlamacı kampanya brief'ini düz yazıyla yazar. Claude
+        + bunu kitle kuralına ve SMS/e-posta metnine çevirir, bir insan i
+        +nceleyip onaylar, mesajlar kuyruktan sahte bir provider'a gider 
+        +ve dashboard teslimatı canlı gösterir. Bonuslar: zamanlama, A/B 
+        +testi, çok dilli metin, CI pipeline.                            
+      6  
+      7  ## Run / Çalıştırma
+      8  
+
+● Update(README.md)
+  ⎿  Added 1 line, removed 1 line
+      43                    llm.Client (Anthropic or mock)
+      44  ```
+      45  
+      46 -- **EN:** The API makes two LLM calls through the `llm.Client` 
+         -interface: first a JSON segment rule (validated by Go, turned i
+         -nto parameterized SQL, never SQL from the LLM), then the stream
+         -ed copy per channel x variant x language. After approval the AP
+         -I fans messages out (`UNIQUE(campaign_id, user_id, channel)`) i
+         -nto one Asynq queue per channel. The worker sends through a Red
+         -is token bucket (100/s per channel), retries with backoff, and 
+         -a reconciler fails messages whose task was archived. The dashbo
+         -ard follows the campaign over SSE.                             
+      46 +- **EN:** The API makes two LLM calls through the `llm.Client` 
+         +interface: first a JSON segment rule (validated by Go, turned i
+         +nto parameterized SQL, never SQL from the LLM), then the stream
+         +ed copy per channel x variant x language. After approval the AP
+         +I fans messages out (`UNIQUE(campaign_id, user_id, channel)`) i
+         +nto one Asynq queue per channel. The worker sends through a Red
+         +is token bucket (100/s per channel), retries with backoff, and 
+         +a reconciler settles stuck messages whose task was archived (as
+         +king the provider whether it delivered them: `sent` if so, othe
+         +rwise `failed`). The dashboard follows the campaign over SSE.  
+      47  - **TR:** API, `llm.Client` arayüzü üzerinden iki LLM çağrısı y
+          apar: önce JSON segment kuralı (Go doğrular, parametreli SQL'e 
+          çevirir; LLM'den SQL gelmez), sonra kanal x varyant x dil başın
+          a akan metin. Onaydan sonra API mesajları (`UNIQUE(campaign_id,
+           user_id, channel)`) kanal başına bir Asynq kuyruğuna dağıtır. 
+          Worker Redis token bucket'ı (kanal başına 100/sn) üzerinden gön
+          derir, backoff ile tekrar dener; reconciler görevi archive'a dü
+          şen mesajları `failed` yapar. Dashboard kampanyayı SSE ile izle
+          r.
+      48  
+      49  API: `POST/GET /campaigns`, `GET /campaigns/{id}`, `PUT /campai
+          gns/{id}/audience`, `POST|PUT /campaigns/{id}/content`, `POST /
+          campaigns/{id}/approve|send|schedule|unschedule`, `GET /campaig
+          ns/{id}/events` (SSE), `POST /audience/suggest|preview`, `GET /
+          mode`, `/healthz`, `/metrics`.
+
+● Update(README.md)
+  ⎿  Added 1 line, removed 1 line
+      44  ```
+      45  
+      46  - **EN:** The API makes two LLM calls through the `llm.Client` 
+          interface: first a JSON segment rule (validated by Go, turned i
+          nto parameterized SQL, never SQL from the LLM), then the stream
+          ed copy per channel x variant x language. After approval the AP
+          I fans messages out (`UNIQUE(campaign_id, user_id, channel)`) i
+          nto one Asynq queue per channel. The worker sends through a Red
+          is token bucket (100/s per channel), retries with backoff, and 
+          a reconciler settles stuck messages whose task was archived (as
+          king the provider whether it delivered them: `sent` if so, othe
+          rwise `failed`). The dashboard follows the campaign over SSE.
+      47 -- **TR:** API, `llm.Client` arayüzü üzerinden iki LLM çağrısı y
+         -apar: önce JSON segment kuralı (Go doğrular, parametreli SQL'e 
+         -çevirir; LLM'den SQL gelmez), sonra kanal x varyant x dil başın
+         -a akan metin. Onaydan sonra API mesajları (`UNIQUE(campaign_id,
+         - user_id, channel)`) kanal başına bir Asynq kuyruğuna dağıtır. 
+         -Worker Redis token bucket'ı (kanal başına 100/sn) üzerinden gön
+         -derir, backoff ile tekrar dener; reconciler görevi archive'a dü
+         -şen mesajları `failed` yapar. Dashboard kampanyayı SSE ile izle
+         -r.                                                             
+      47 +- **TR:** API, `llm.Client` arayüzü üzerinden iki LLM çağrısı y
+         +apar: önce JSON segment kuralı (Go doğrular, parametreli SQL'e 
+         +çevirir; LLM'den SQL gelmez), sonra kanal x varyant x dil başın
+         +a akan metin. Onaydan sonra API mesajları (`UNIQUE(campaign_id,
+         + user_id, channel)`) kanal başına bir Asynq kuyruğuna dağıtır. 
+         +Worker Redis token bucket'ı (kanal başına 100/sn) üzerinden gön
+         +derir, backoff ile tekrar dener; reconciler görevi archive'a dü
+         +şen takılı mesajları sonuçlandırır (provider'a teslim edip etme
+         +diğini sorar: edildiyse `sent`, değilse `failed`). Dashboard ka
+         +mpanyayı SSE ile izler.                                        
+      48  
+      49  API: `POST/GET /campaigns`, `GET /campaigns/{id}`, `PUT /campai
+          gns/{id}/audience`, `POST|PUT /campaigns/{id}/content`, `POST /
+          campaigns/{id}/approve|send|schedule|unschedule`, `GET /campaig
+          ns/{id}/events` (SSE), `POST /audience/suggest|preview`, `GET /
+          mode`, `/healthz`, `/metrics`.
+      50  
+
+● Update(README.md)
+  ⎿  Added 1 line, removed 1 line
+      93  backend/                 Go module / Go modülü
+      94    cmd/api                HTTP API + SSE
+      95    cmd/worker             queue worker, sends messages and start
+          s scheduled campaigns / kuyruk worker'ı, mesajları gönderir, za
+          manlanmış kampanyaları başlatır
+      96 -  cmd/mockprovider       fake SMS/email provider (errors, delay
+         -s, 429) / sahte SMS/e-posta provider'ı (hata, gecikme, 429)    
+      96 +  cmd/mockprovider       fake SMS/email provider (errors, delay
+         +s, 429, delivery lookup) / sahte SMS/e-posta provider'ı (hata, 
+         +gecikme, 429, teslim sorgusu)                                  
+      97    cmd/seed               migrations + seed data / migration + ö
+          rnek veri
+      98    internal/segment       audience rule: validator and SQL build
+          er / kitle kuralı: doğrulayıcı ve SQL builder
+      99    internal/llm           Claude client, mock LLM, prompts / Cla
+          ude istemcisi, mock LLM, prompt'lar
+
+● Update(.env.example)
+  ⎿  Added 3 lines
+       4  POSTGRES_PASSWORD=app
+       5  POSTGRES_USER=app
+       6  POSTGRES_DB=app
+       7 +# Share (0..1) of mock provider calls answered with an error or
+         + a 429, to watch retries work.                                 
+       8 +PROVIDER_ERROR_RATE=0.05                                       
+       9 +PROVIDER_TOO_MANY_RATE=0.05                                    
+      10  # Host ports for connecting from your own tools (localhost only
+          ).
+      11  POSTGRES_PORT=5433
+      12  REDIS_PORT=6380
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      35  
+      36  ## 7. How do we handle failures and the 100 msg/s limit? / Hata
+          lar ve saniyede 100 mesaj limiti nasıl yönetilir?
+      37  
+      38 -- **EN:** Asynq queue on Redis. Retry on 429, 5xx, and timeouts
+         - with exponential backoff and jitter, up to 5 attempts, honorin
+         -g `Retry-After`; other 4xx are not retried. After the last atte
+         -mpt the message is `failed` and stays in the Asynq archive, vis
+         -ible on the dashboard. The rate limit is a token bucket per cha
+         -nnel in Redis, so it holds with any number of workers.         
+      38 +- **EN:** Asynq queue on Redis. Retry on 429, 5xx, and timeouts
+         + with exponential backoff and jitter, up to 5 attempts, honorin
+         +g `Retry-After`; other 4xx are not retried. After the last atte
+         +mpt the message is `failed` (unless the provider says it did de
+         +liver it, see decision 6) and stays in the Asynq archive, visib
+         +le on the dashboard. The rate limit is a token bucket per chann
+         +el in Redis, so it holds with any number of workers.           
+      39  - **TR:** Redis üzerinde Asynq kuyruğu. 429, 5xx ve zaman aşımı
+          nda üstel bekleme + jitter ile en fazla 5 deneme, `Retry-After`
+          'a uyulur; diğer 4xx tekrar denenmez. Son denemeden sonra mesaj
+           `failed` olur, Asynq archive'ında kalır ve dashboard'da görünü
+          r. Rate limit Redis'te kanal başına token bucket'tır; kaç worke
+          r çalışırsa çalışsın korunur.
+      40  
+      41  ## 8. How do character limits work with personalization? / Kişi
+          selleştirmeyle karakter limitleri nasıl işler?
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      36  ## 7. How do we handle failures and the 100 msg/s limit? / Hata
+          lar ve saniyede 100 mesaj limiti nasıl yönetilir?
+      37  
+      38  - **EN:** Asynq queue on Redis. Retry on 429, 5xx, and timeouts
+           with exponential backoff and jitter, up to 5 attempts, honorin
+          g `Retry-After`; other 4xx are not retried. After the last atte
+          mpt the message is `failed` (unless the provider says it did de
+          liver it, see decision 6) and stays in the Asynq archive, visib
+          le on the dashboard. The rate limit is a token bucket per chann
+          el in Redis, so it holds with any number of workers.
+      39 -- **TR:** Redis üzerinde Asynq kuyruğu. 429, 5xx ve zaman aşımı
+         -nda üstel bekleme + jitter ile en fazla 5 deneme, `Retry-After`
+         -'a uyulur; diğer 4xx tekrar denenmez. Son denemeden sonra mesaj
+         - `failed` olur, Asynq archive'ında kalır ve dashboard'da görünü
+         -r. Rate limit Redis'te kanal başına token bucket'tır; kaç worke
+         -r çalışırsa çalışsın korunur.                                  
+      39 +- **TR:** Redis üzerinde Asynq kuyruğu. 429, 5xx ve zaman aşımı
+         +nda üstel bekleme + jitter ile en fazla 5 deneme, `Retry-After`
+         +'a uyulur; diğer 4xx tekrar denenmez. Son denemeden sonra mesaj
+         + `failed` olur (provider teslim ettiğini söylemiyorsa, bkz. kar
+         +ar 6), Asynq archive'ında kalır ve dashboard'da görünür. Rate l
+         +imit Redis'te kanal başına token bucket'tır; kaç worker çalışır
+         +sa çalışsın korunur.                                           
+      40  
+      41  ## 8. How do character limits work with personalization? / Kişi
+          selleştirmeyle karakter limitleri nasıl işler?
+      42  
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      75  
+      76  ## 15. How do the queue and worker stay correct under load and 
+          failure? / Kuyruk ve worker yük ve hata altında nasıl doğru kal
+          ır?
+      77  
+      78 -- **EN:** Each channel has its own Asynq queue (`sms`, `email`)
+         -, so a large SMS backlog waiting on its 100 msg/s token cannot 
+         -hold email back; `default` only carries scheduled-campaign task
+         -s. Consent is checked at fan-out and again just before delivery
+         -, because it can be withdrawn in between: such a message become
+         -s `failed` and the provider is never called. Asynq archives a t
+         -ask after its last attempt whatever the error, so the last atte
+         -mpt of an infrastructure error (Redis, database) also marks the
+         - message `failed`; otherwise it would stay pending and the camp
+         -aign would never complete. A cancelled context (shutdown) is no
+         -t counted as a failure, because Asynq puts that task back. Only
+         - a message that no longer exists skips retries. Backoff is inde
+         -xed by Asynq's retry count, which is 0 after the first failure,
+         - so the waits are 1, 2, 4, 8 seconds. If the database is down t
+         -hrough the last attempt, a reconciler in the worker (every 30 s
+         -) takes the open messages (`pending`/`retrying`, untouched for 
+         -a minute, oldest 500 per run, served by a partial index), check
+         -s whether Asynq archived their task, and settles those with the
+         - provider lookup from decision 6: delivered means `sent`, other
+         -wise `failed`. It reads open messages instead of scanning the a
+         -rchive, so its cost follows the number of stuck messages, not t
+         -he archive size. Enqueueing again would not help because Asynq 
+         -keeps an archived task's id.                                   
+      78 +- **EN:** Each channel has its own Asynq queue (`sms`, `email`)
+         +, so a large SMS backlog waiting on its 100 msg/s token cannot 
+         +hold email back; `default` only carries scheduled-campaign task
+         +s. Consent is checked at fan-out and again just before delivery
+         +, because it can be withdrawn in between: such a message become
+         +s `failed` and the provider is never called. Asynq archives a t
+         +ask after its last attempt whatever the error, so the last atte
+         +mpt of an infrastructure error (Redis, database) also marks the
+         + message `failed`; otherwise it would stay pending and the camp
+         +aign would never complete. A cancelled context (shutdown) is no
+         +t counted as a failure, because Asynq puts that task back. Amon
+         +g these infrastructure errors only a message that no longer exi
+         +sts skips retries (the provider's own final answers, such as a 
+         +4xx, skip them too, see decision 7). Backoff is indexed by Asyn
+         +q's retry count, which is 0 after the first failure, so the wai
+         +ts are 1, 2, 4, 8 seconds. If the database is down through the 
+         +last attempt, a reconciler in the worker (every 30 s) takes the
+         + open messages (`pending`/`retrying`, untouched for a minute, o
+         +ldest 500 per run, served by a partial index), checks whether A
+         +synq archived their task, and settles those with the provider l
+         +ookup from decision 6: delivered means `sent`, otherwise `faile
+         +d`. It reads open messages instead of scanning the archive, so 
+         +its cost follows the number of stuck messages, not the archive 
+         +size. Enqueueing again would not help because Asynq keeps an ar
+         +chived task's id.                                              
+      79  - **TR:** Her kanalın kendi Asynq kuyruğu vardır (`sms`, `email
+          `); böylece 100 msg/s token'ını bekleyen büyük bir SMS birikimi
+           email'i geride tutamaz. `default` kuyruğu yalnızca zamanlanmış
+           kampanya görevlerini taşır. İzin hem fan-out'ta hem teslimatta
+          n hemen önce kontrol edilir, çünkü arada geri çekilebilir: böyl
+          e bir mesaj `failed` olur ve provider hiç çağrılmaz. Asynq, hat
+          a ne olursa olsun son denemeden sonra görevi archive'a alır; bu
+           yüzden altyapı hatasının (Redis, veritabanı) son denemesi de m
+          esajı `failed` yapar, yoksa mesaj pending kalır ve kampanya hiç
+           tamamlanmaz. İptal edilmiş context (kapanış) başarısızlık sayı
+          lmaz, çünkü Asynq o görevi geri koyar. Yalnızca artık var olmay
+          an mesaj tekrar denenmez. Backoff, Asynq'in ilk hatadan sonra 0
+           olan retry sayacına göre indekslenir; bekleme süreleri 1, 2, 4
+          , 8 saniyedir. Veritabanı son denemeye kadar kapalı kalırsa wor
+          ker'daki reconciler (30 sn'de bir) açık mesajları (`pending`/`r
+          etrying`, bir dakikadır dokunulmamış, çalışma başına en eski 50
+          0, kısmi index ile) alır, görevlerinin Asynq tarafından archive
+          'a alınıp alınmadığına bakar ve bunları 6. kararın provider sor
+          gusuyla sonuçlandırır: teslim edilmişse `sent`, değilse `failed
+          `. Archive'ı taramak yerine açık mesajları okur; maliyeti archi
+          ve boyutuna değil takılan mesaj sayısına bağlıdır. Yeniden kuyr
+          uğa atmak işe yaramaz, çünkü Asynq archive'daki görevin id'sini
+           tutar.
+      80  
+      81  ## 16. Which model? / Hangi model?
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      76  ## 15. How do the queue and worker stay correct under load and 
+          failure? / Kuyruk ve worker yük ve hata altında nasıl doğru kal
+          ır?
+      77  
+      78  - **EN:** Each channel has its own Asynq queue (`sms`, `email`)
+          , so a large SMS backlog waiting on its 100 msg/s token cannot 
+          hold email back; `default` only carries scheduled-campaign task
+          s. Consent is checked at fan-out and again just before delivery
+          , because it can be withdrawn in between: such a message become
+          s `failed` and the provider is never called. Asynq archives a t
+          ask after its last attempt whatever the error, so the last atte
+          mpt of an infrastructure error (Redis, database) also marks the
+           message `failed`; otherwise it would stay pending and the camp
+          aign would never complete. A cancelled context (shutdown) is no
+          t counted as a failure, because Asynq puts that task back. Amon
+          g these infrastructure errors only a message that no longer exi
+          sts skips retries (the provider's own final answers, such as a 
+          4xx, skip them too, see decision 7). Backoff is indexed by Asyn
+          q's retry count, which is 0 after the first failure, so the wai
+          ts are 1, 2, 4, 8 seconds. If the database is down through the 
+          last attempt, a reconciler in the worker (every 30 s) takes the
+           open messages (`pending`/`retrying`, untouched for a minute, o
+          ldest 500 per run, served by a partial index), checks whether A
+          synq archived their task, and settles those with the provider l
+          ookup from decision 6: delivered means `sent`, otherwise `faile
+          d`. It reads open messages instead of scanning the archive, so 
+          its cost follows the number of stuck messages, not the archive 
+          size. Enqueueing again would not help because Asynq keeps an ar
+          chived task's id.
+      79 -- **TR:** Her kanalın kendi Asynq kuyruğu vardır (`sms`, `email
+         -`); böylece 100 msg/s token'ını bekleyen büyük bir SMS birikimi
+         - email'i geride tutamaz. `default` kuyruğu yalnızca zamanlanmış
+         - kampanya görevlerini taşır. İzin hem fan-out'ta hem teslimatta
+         -n hemen önce kontrol edilir, çünkü arada geri çekilebilir: böyl
+         -e bir mesaj `failed` olur ve provider hiç çağrılmaz. Asynq, hat
+         -a ne olursa olsun son denemeden sonra görevi archive'a alır; bu
+         - yüzden altyapı hatasının (Redis, veritabanı) son denemesi de m
+         -esajı `failed` yapar, yoksa mesaj pending kalır ve kampanya hiç
+         - tamamlanmaz. İptal edilmiş context (kapanış) başarısızlık sayı
+         -lmaz, çünkü Asynq o görevi geri koyar. Yalnızca artık var olmay
+         -an mesaj tekrar denenmez. Backoff, Asynq'in ilk hatadan sonra 0
+         - olan retry sayacına göre indekslenir; bekleme süreleri 1, 2, 4
+         -, 8 saniyedir. Veritabanı son denemeye kadar kapalı kalırsa wor
+         -ker'daki reconciler (30 sn'de bir) açık mesajları (`pending`/`r
+         -etrying`, bir dakikadır dokunulmamış, çalışma başına en eski 50
+         -0, kısmi index ile) alır, görevlerinin Asynq tarafından archive
+         -'a alınıp alınmadığına bakar ve bunları 6. kararın provider sor
+         -gusuyla sonuçlandırır: teslim edilmişse `sent`, değilse `failed
+         -`. Archive'ı taramak yerine açık mesajları okur; maliyeti archi
+         -ve boyutuna değil takılan mesaj sayısına bağlıdır. Yeniden kuyr
+         -uğa atmak işe yaramaz, çünkü Asynq archive'daki görevin id'sini
+         - tutar.                                                        
+      79 +- **TR:** Her kanalın kendi Asynq kuyruğu vardır (`sms`, `email
+         +`); böylece 100 msg/s token'ını bekleyen büyük bir SMS birikimi
+         + email'i geride tutamaz. `default` kuyruğu yalnızca zamanlanmış
+         + kampanya görevlerini taşır. İzin hem fan-out'ta hem teslimatta
+         +n hemen önce kontrol edilir, çünkü arada geri çekilebilir: böyl
+         +e bir mesaj `failed` olur ve provider hiç çağrılmaz. Asynq, hat
+         +a ne olursa olsun son denemeden sonra görevi archive'a alır; bu
+         + yüzden altyapı hatasının (Redis, veritabanı) son denemesi de m
+         +esajı `failed` yapar, yoksa mesaj pending kalır ve kampanya hiç
+         + tamamlanmaz. İptal edilmiş context (kapanış) başarısızlık sayı
+         +lmaz, çünkü Asynq o görevi geri koyar. Bu altyapı hataları aras
+         +ında yalnızca artık var olmayan mesaj tekrar denenmez (provider
+         +'ın kesin cevapları, örneğin 4xx, de tekrar denenmez; bkz. kara
+         +r 7). Backoff, Asynq'in ilk hatadan sonra 0 olan retry sayacına
+         + göre indekslenir; bekleme süreleri 1, 2, 4, 8 saniyedir. Verit
+         +abanı son denemeye kadar kapalı kalırsa worker'daki reconciler 
+         +(30 sn'de bir) açık mesajları (`pending`/`retrying`, bir dakika
+         +dır dokunulmamış, çalışma başına en eski 500, kısmi index ile) 
+         +alır, görevlerinin Asynq tarafından archive'a alınıp alınmadığı
+         +na bakar ve bunları 6. kararın provider sorgusuyla sonuçlandırı
+         +r: teslim edilmişse `sent`, değilse `failed`. Archive'ı taramak
+         + yerine açık mesajları okur; maliyeti archive boyutuna değil ta
+         +kılan mesaj sayısına bağlıdır. Yeniden kuyruğa atmak işe yarama
+         +z, çünkü Asynq archive'daki görevin id'sini tutar.             
+      80  
+      81  ## 16. Which model? / Hangi model?
+      82  
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      80  
+      81  ## 16. Which model? / Hangi model?
+      82  
+      83 -- **EN:** `claude-sonnet-5-5` by default: fast and cheap enough
+         - for interactive streaming, and structured output works the sam
+         -e as on larger models. `CLAUDE_MODEL` overrides it.            
+      83 +- **EN:** `claude-sonnet-5-5` by default: the task is short JSO
+         +N and short copy with the rules enforced in Go, so a larger mod
+         +el is not needed, and a smaller one keeps interactive streaming
+         + fast and cheap. `CLAUDE_MODEL` overrides it.                  
+      84  - **TR:** Varsayılan `claude-sonnet-5-5`: etkileşimli stream iç
+          in yeterince hızlı ve ucuz, yapılandırılmış çıktı büyük modelle
+          rle aynı çalışır. `CLAUDE_MODEL` ile değiştirilir.
+      85  
+      86  ## 17. How is the system monitored? / Sistem nasıl izlenir?
+
+● Update(docs\DECISIONS.md)
+  ⎿  Added 1 line, removed 1 line
+      81  ## 16. Which model? / Hangi model?
+      82  
+      83  - **EN:** `claude-sonnet-5-5` by default: the task is short JSO
+          N and short copy with the rules enforced in Go, so a larger mod
+          el is not needed, and a smaller one keeps interactive streaming
+           fast and cheap. `CLAUDE_MODEL` overrides it.
+      84 -- **TR:** Varsayılan `claude-sonnet-5-5`: etkileşimli stream iç
+         -in yeterince hızlı ve ucuz, yapılandırılmış çıktı büyük modelle
+         -rle aynı çalışır. `CLAUDE_MODEL` ile değiştirilir.             
+      84 +- **TR:** Varsayılan `claude-sonnet-5-5`: iş kısa JSON ve kısa 
+         +metinden ibaret, kurallar Go'da uygulanıyor; bu yüzden daha büy
+         +ük modele gerek yok, daha küçük model ise etkileşimli stream'i 
+         +hızlı ve ucuz tutar. `CLAUDE_MODEL` ile değiştirilir.          
+      85  
+      86  ## 17. How is the system monitored? / Sistem nasıl izlenir?
+      87  
+
+● Dokümanları ve kodu karşılaştırdım. Bulduğum tutarsızlıkları düzelttim, ama
+  commit etmedim.
+
+  Düzeltilenler
+  1. README mimari özeti: Reconciler'ın mesajları doğrudan failed yaptığı
+     yazıyordu. Artık önce provider'a soruyor: teslim edildiyse sent, değilse
+     failed. EN ve TR düzeltildi.
+  2. DECISIONS #7: "Son denemeden sonra mesaj failed olur" cümlesine, provider
+     teslim ettiğini söylerse bunun geçerli olmadığı eklendi (karar 6'ya atıf).
+  3. DECISIONS #15: "Yalnızca artık var olmayan mesaj tekrar denenmez"
+     yanıltıcıydı, çünkü 4xx, izin ve limit hataları da tekrar denenmiyor.
+     Cümleyi altyapı hatalarına daralttım ve karar 7'ye atıf ekledim.
+  4. DECISIONS #16: "Yapılandırılmış çıktı büyük modellerle aynı çalışır"
+     iddiasını gerçek key ile hiç denemediğim için kaldırdım. Yerine
+     doğrulanabilir gerekçeyi yazdım: iş kısa JSON ve kısa metin, kurallar Go'da
+     uygulanıyor.
+  5. README intro: Bonus listesine CI eklendi, çünkü case'de bonus ve CI'da var.
+  6. README yapı listesi: Mock provider satırına "teslim sorgusu" eklendi.
+  7. .env.example: README PROVIDER_ERROR_RATE ve PROVIDER_TOO_MANY_RATE'e atıf
+     yapıyordu ama şablonda yoktu. İkisini de ekledim. Varsayılanlar
+     compose'dakiyle aynı (0.05), davranış değişmiyor.
+
+  Tutarlı çıkanlar
+  - Kontrol edip eşleştirdiklerim: 5 deneme, bekleme süreleri 1/2/4/8 sn, 100/sn
+    limiti, SMS 160 ve konu 80 karakter, kanal başına kuyruk, 30 sn'lik
+    reconciler, CI'daki -race ve migration 005.
+  - Kontrol etmediğim iki iddia: #13 ve #8'in alt ayrıntıları (örneğin "en uzun
+    isimle render").
+
+  Dokunmadığım şey
+  - docs/plan.md başlangıç planı olduğu için eski ifadeler duruyor (örneğin A/B
+    için hash(user_id)%2, gerçekte hashtext & 1). Model satırını daha önce
+    güncellemiştim.
+  - İstersen en üste "başlangıç planı, güncel kararlar için DECISIONS.md'ye bak"
+    notu ekleyebilirim.
+
+  Commit ve push için mesaj olarak "Align docs with provider lookup, reconciler
+  and env template" öneririm. İstersen söylemen yeterli.
+
+✻ Cooked for 2m 26s · done 6:37 AM
+
+❯ tamam bu kadar yeterli commit push at teslim edelim projeyi.                  
+
+  Pushed to main, ran 1 shell command (ctrl+o to expand)
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ commit push istedim nedenn bu kadar uzun sürdü ?                              
+
+● Commit ve push hemen bitti. 506ec81 push edildi. Uzun süren, senin istemediğin
+  ikinci adımdı: CI'ın bitmesini beklemeye başladım. CI yaklaşık 7-8 dakika
+  sürdüğü için o komut takılı kaldı ve sen durdurdun. Sormadan eklememeliydim,
+  özür dilerim.
+
+  Şu an durum:
+  - Git: Son commit 506ec81 (docs ve .env.example düzeltmeleri) main'e gitti.
+    Çalışma ağacı temiz.
+  - CI: Bu son commit'in sonucunu görmedim. Bir önceki commit 0c694ea için lint
+    ve test yeşildi. Son commit sadece doküman ve .env.example değiştirdiği için
+    bozulmasını beklemiyorum. Ama emin olmak için GitHub Actions sayfasına bir
+    bakman iyi olur.
+
+  Teslim öncesi kalan tek şey, bu oturumun /export'u ve ai-sessions/ içine
+  eklenmesi. İstersen /ship-session ile ben hazırlarım.
+
+✻ Churned for 9s · done 6:53 AM
